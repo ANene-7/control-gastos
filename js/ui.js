@@ -1,0 +1,2036 @@
+import {
+    calculateDailyBalance,
+    calculateMonthlySummary,
+    calculateMonthlyMinimumBalance
+} from "./calculations.js";
+
+import {
+    renderCalendar
+} from "./calendar.js";
+
+import {
+    saveRecord,
+    getAllRecords,
+    replaceStoreRecords
+} from "./database.js";
+
+import {
+    setSettings
+} from "./state.js";
+
+
+export async function initializeUI(settings) {
+
+    /*
+        ELEMENTOS DEL DOM
+    */
+
+    const addMovementButton =
+        document.getElementById(
+            "addMovementButton"
+        );
+
+
+    const movementModal =
+        document.getElementById(
+            "movementModal"
+        );
+
+
+    const closeMovementModalButton =
+        document.getElementById(
+            "closeMovementModalButton"
+        );
+
+
+    const cancelMovementButton =
+        document.getElementById(
+            "cancelMovementButton"
+        );
+
+
+    const paymentMethod =
+        document.getElementById(
+            "paymentMethod"
+        );
+
+
+    const creditSelectorContainer =
+        document.getElementById(
+            "creditSelectorContainer"
+        );
+
+
+    const settingsButton =
+        document.getElementById(
+            "settingsButton"
+        );
+
+
+    const settingsModal =
+        document.getElementById(
+            "settingsModal"
+        );
+
+
+    const settingsForm =
+        document.getElementById(
+            "settingsForm"
+        );
+
+
+    const initialBalance =
+        document.getElementById(
+            "initialBalance"
+        );
+
+
+    const initialBalanceDate =
+        document.getElementById(
+            "initialBalanceDate"
+        );
+
+    const creditsButton =
+        document.getElementById(
+            "creditsButton"
+        );
+
+    const creditsModal =
+        document.getElementById(
+            "creditsModal"
+        );
+
+    const closeCreditsModalButton =
+        document.getElementById(
+            "closeCreditsModalButton"
+        );
+
+    const cancelCreditButton =
+        document.getElementById(
+            "cancelCreditButton"
+        );
+
+    const creditForm =
+        document.getElementById(
+            "creditForm"
+        );
+
+    const creditsList =
+        document.getElementById(
+            "creditsList"
+        );
+
+    const creditSelector =
+        document.getElementById(
+            "creditSelector"
+        );
+
+    const creditPaymentSelectorContainer =
+        document.getElementById(
+            "creditPaymentSelectorContainer"
+        );
+
+
+    const creditPaymentSelector =
+        document.getElementById(
+            "creditPaymentSelector"
+        );
+
+
+    const exportBackupButton =
+        document.getElementById(
+            "exportBackupButton"
+        );
+
+
+    const importBackupButton =
+        document.getElementById(
+            "importBackupButton"
+        );
+
+
+    const backupFileInput =
+        document.getElementById(
+            "backupFileInput"
+        );
+
+
+    /*
+        =================================
+        EXPORTAR RESPALDO
+        =================================
+    */
+
+    exportBackupButton.addEventListener(
+        "click",
+        async () => {
+
+            try {
+
+                const settingsRecords =
+                    await getAllRecords(
+                        "settings"
+                    );
+
+
+                const movements =
+                    await getAllRecords(
+                        "movements"
+                    );
+
+
+                const credits =
+                    await getAllRecords(
+                        "credits"
+                    );
+
+
+                const backup = {
+
+                    app:
+                        "Control de Gastos",
+
+
+                    version:
+                        1,
+
+
+                    exportedAt:
+                        new Date()
+                            .toISOString(),
+
+
+                    data: {
+
+                        settings:
+                            settingsRecords,
+
+                        movements,
+
+                        credits
+
+                    }
+
+                };
+
+
+                const json =
+                    JSON.stringify(
+                        backup,
+                        null,
+                        2
+                    );
+
+
+                const blob =
+                    new Blob(
+                        [json],
+                        {
+                            type:
+                                "application/json"
+                        }
+                    );
+
+
+                const url =
+                    URL.createObjectURL(
+                        blob
+                    );
+
+
+                const link =
+                    document.createElement(
+                        "a"
+                    );
+
+
+                const date =
+                    getLocalDateString();
+
+
+                link.href =
+                    url;
+
+
+                link.download =
+                    `control-gastos-respaldo-${date}.json`;
+
+
+                document.body.appendChild(
+                    link
+                );
+
+
+                link.click();
+
+
+                link.remove();
+
+
+                URL.revokeObjectURL(
+                    url
+                );
+
+
+                showNotification(
+                    "Respaldo exportado correctamente."
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo exportar el respaldo:",
+                    error
+                );
+
+
+                showNotification(
+                    "No se pudo exportar el respaldo.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        =================================
+        IMPORTAR RESPALDO
+        =================================
+    */
+
+    importBackupButton.addEventListener(
+        "click",
+        () => {
+
+            /*
+                Limpiamos el valor para permitir
+                seleccionar dos veces seguidas
+                el mismo archivo.
+            */
+
+            backupFileInput.value =
+                "";
+
+
+            backupFileInput.click();
+
+        }
+    );
+
+
+    backupFileInput.addEventListener(
+        "change",
+        async () => {
+
+            try {
+
+                const file =
+                    backupFileInput
+                        .files[0];
+
+
+                if (!file) {
+
+                    return;
+
+                }
+
+
+                const text =
+                    await file.text();
+
+
+                let backup;
+
+
+                try {
+
+                    backup =
+                        JSON.parse(
+                            text
+                        );
+
+                } catch {
+
+                    throw new Error(
+                        "El archivo seleccionado no contiene un JSON válido."
+                    );
+
+                }
+
+
+                /*
+                    Validar identidad
+                    y versión.
+                */
+
+                if (
+                    backup.app !==
+                        "Control de Gastos"
+                ) {
+
+                    throw new Error(
+                        "El archivo no corresponde a un respaldo de Control de Gastos."
+                    );
+
+                }
+
+
+                if (
+                    backup.version !==
+                        1
+                ) {
+
+                    throw new Error(
+                        "La versión del respaldo no es compatible."
+                    );
+
+                }
+
+
+                if (
+                    !backup.data ||
+                    !Array.isArray(
+                        backup.data.settings
+                    ) ||
+                    !Array.isArray(
+                        backup.data.movements
+                    ) ||
+                    !Array.isArray(
+                        backup.data.credits
+                    )
+                ) {
+
+                    throw new Error(
+                        "El respaldo tiene una estructura inválida."
+                    );
+
+                }
+
+
+                /*
+                    Confirmación antes de
+                    reemplazar información.
+                */
+
+                const confirmed =
+                    await showConfirmDialog({
+                        title:
+                            "Importar respaldo",
+
+                        message:
+                            "Los datos actuales serán reemplazados por los del respaldo. Esta acción no se puede deshacer.",
+
+                        confirmText:
+                            "Importar",
+
+                        cancelText:
+                            "Cancelar"
+                    });
+
+
+                if (!confirmed) {
+
+                    return;
+
+                }
+
+
+                /*
+                    Restaurar cada store.
+                */
+
+                await replaceStoreRecords(
+                    "settings",
+                    backup.data.settings
+                );
+
+
+                await replaceStoreRecords(
+                    "movements",
+                    backup.data.movements
+                );
+
+
+                await replaceStoreRecords(
+                    "credits",
+                    backup.data.credits
+                );
+
+
+                showNotification(
+                    "Respaldo restaurado correctamente."
+                );
+
+
+                /*
+                    Recargamos para que:
+
+                    - state.js
+                    - configuración
+                    - créditos
+                    - calendario
+                    - saldo
+
+                    vuelvan a inicializarse
+                    desde IndexedDB.
+                */
+
+                setTimeout(
+                    () => {
+
+                        window.location.reload();
+
+                    },
+                    700
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo importar el respaldo:",
+                    error
+                );
+
+
+                showNotification(
+                    error.message ||
+                    "No se pudo importar el respaldo.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        Abrir modal de créditos.
+    */
+
+    creditsButton.addEventListener(
+        "click",
+        () => {
+
+            creditsModal.classList.remove(
+                "hidden"
+            );
+
+        }
+    );
+
+
+    /*
+        Cerrar modal.
+    */
+
+    closeCreditsModalButton.addEventListener(
+        "click",
+        () => {
+
+            creditsModal.classList.add(
+                "hidden"
+            );
+
+        }
+    );
+
+
+    cancelCreditButton.addEventListener(
+        "click",
+        () => {
+
+            creditsModal.classList.add(
+                "hidden"
+            );
+
+        }
+    );
+
+
+    /*
+        Guardar crédito.
+    */
+
+    creditForm.addEventListener(
+        "submit",
+        async event => {
+
+            event.preventDefault();
+
+
+            try {
+
+                const name =
+                    document
+                        .getElementById(
+                            "creditName"
+                        )
+                        .value
+                        .trim();
+
+
+                const type =
+                    document
+                        .getElementById(
+                            "creditType"
+                        )
+                        .value;
+
+
+                const creditLimit =
+                    Number(
+                        document
+                            .getElementById(
+                                "creditLimit"
+                            )
+                            .value
+                    );
+
+
+                const closingDay =
+                    Number(
+                        document
+                            .getElementById(
+                                "creditClosingDay"
+                            )
+                            .value
+                    );
+
+
+                const paymentDueDay =
+                    Number(
+                        document
+                            .getElementById(
+                                "creditPaymentDueDay"
+                            )
+                            .value
+                    );
+
+
+                /*
+                    Validaciones adicionales.
+                */
+
+                if (!name) {
+
+                    throw new Error(
+                        "Debes indicar un nombre para el crédito."
+                    );
+
+                }
+
+
+                if (
+                    creditLimit < 0
+                ) {
+
+                    throw new Error(
+                        "El límite de crédito no puede ser negativo."
+                    );
+
+                }
+
+
+                if (
+                    closingDay < 1 ||
+                    closingDay > 31
+                ) {
+
+                    throw new Error(
+                        "El día de corte debe estar entre 1 y 31."
+                    );
+
+                }
+
+
+                if (
+                    paymentDueDay < 1 ||
+                    paymentDueDay > 31
+                ) {
+
+                    throw new Error(
+                        "La fecha límite de pago debe estar entre 1 y 31."
+                    );
+
+                }
+
+
+                /*
+                    Crear objeto del crédito.
+                */
+
+                const credit = {
+
+                    id:
+                        crypto.randomUUID(),
+
+                    name,
+
+                    type,
+
+                    creditLimit,
+
+                    closingDay,
+
+                    paymentDueDay,
+
+                    active: true,
+
+                    createdAt:
+                        new Date().toISOString()
+
+                };
+
+
+                /*
+                    Guardar en IndexedDB.
+                */
+
+                await saveRecord(
+                    "credits",
+                    credit
+                );
+
+
+                /*
+                    Limpiar formulario.
+                */
+
+                creditForm.reset();
+
+
+                /*
+                    Actualizar lista y selector.
+                */
+
+                await loadCredits(
+                    creditSelector,
+                    creditPaymentSelector,
+                    creditsList
+                );
+
+
+                creditsModal.classList.add(
+                    "hidden"
+                );
+
+
+                showNotification(
+                    "Crédito guardado correctamente."
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo guardar el crédito:",
+                    error
+                );
+
+
+                showNotification(
+                    error.message ||
+                    "No se pudo guardar el crédito.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+    /*
+        Cargar configuración existente
+    */
+
+    /*
+        FECHA ACTUAL
+
+        Sólo usamos hoy como fecha
+        predeterminada cuando todavía
+        no existe configuración.
+    */
+
+    if (settings) {
+
+        initialBalance.value =
+            settings.initialBalance;
+
+
+        initialBalanceDate.value =
+            settings.initialBalanceDate;
+
+
+        await updateCurrentBalance();
+
+    } else {
+
+        const today =
+            getLocalDateString();
+
+
+        initialBalanceDate.value =
+            today;
+
+    }
+
+
+    /*
+        MOVIMIENTOS
+    */
+
+    addMovementButton.addEventListener(
+        "click",
+        () => {
+
+            movementModal
+                .classList
+                .remove("hidden");
+
+        }
+    );
+
+
+    closeMovementModalButton.addEventListener(
+        "click",
+        () => {
+
+            movementModal
+                .classList
+                .add("hidden");
+
+        }
+    );
+
+
+    cancelMovementButton.addEventListener(
+        "click",
+        () => {
+
+            movementModal
+                .classList
+                .add("hidden");
+
+        }
+    );
+
+
+    /*
+        ABRIR CONFIGURACIÓN
+    */
+
+    settingsButton.addEventListener(
+        "click",
+        () => {
+
+            settingsModal
+                .classList
+                .remove("hidden");
+
+        }
+    );
+
+
+    /*
+        GUARDAR CONFIGURACIÓN
+    */
+
+    settingsForm.addEventListener(
+        "submit",
+        async (event) => {
+
+            event.preventDefault();
+
+
+            const balance =
+                Number(
+                    initialBalance.value
+                );
+
+
+            const date =
+                initialBalanceDate.value;
+
+
+            /*
+                Validaciones básicas
+            */
+
+            if (
+                !Number.isFinite(balance) ||
+                balance < 0
+            ) {
+
+                alert(
+                    "Introduce un saldo válido."
+                );
+
+                return;
+
+            }
+
+
+            if (!date) {
+
+                alert(
+                    "Selecciona una fecha válida."
+                );
+
+                return;
+
+            }
+
+
+            /*
+                Crear objeto de configuración
+            */
+
+            const settingsData = {
+
+                id: "main",
+
+                initialBalance:
+                    balance,
+
+                initialBalanceDate:
+                    date
+
+            };
+
+
+            try {
+
+                /*
+                    Guardar en IndexedDB
+                */
+
+                await saveRecord(
+                    "settings",
+                    settingsData
+                );
+
+
+                /*
+                    Actualizar estado
+                */
+
+                setSettings(
+                    settingsData
+                );
+
+
+                /*
+                    Cerrar modal
+                */
+
+                settingsModal
+                    .classList
+                    .add("hidden");
+
+
+                console.log(
+                    "Configuración guardada:",
+                    settingsData
+                );
+
+
+                /*
+                    Actualizar interfaz
+                    temporalmente.
+                */
+
+                await updateCurrentBalance();
+
+                await renderCalendar();
+
+
+            } catch (error) {
+
+                console.error(
+                    "Error al guardar configuración:",
+                    error
+                );
+
+
+                alert(
+                    "No se pudo guardar la configuración."
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        =================================
+        DASHBOARD MENSUAL
+        =================================
+
+        Escuchar los cambios de periodo
+        realizados desde el calendario.
+    */
+
+    window.addEventListener(
+        "calendarPeriodChanged",
+        event => {
+
+            const {
+                year,
+                month
+            } =
+                event.detail;
+
+
+            updateMonthlyDashboard(
+                year,
+                month
+            );
+
+        }
+    );
+
+
+    /*
+        Cargar créditos existentes.
+    */
+
+    await loadCredits(
+        creditSelector,
+        creditPaymentSelector,
+        creditsList
+    );
+
+}
+
+
+/*
+    Actualiza las tarjetas correspondientes
+    al mes visible en el calendario.
+*/
+
+async function updateMonthlyDashboard(
+    year,
+    month
+) {
+
+    const movements =
+        await getAllRecords(
+            "movements"
+        );
+
+
+    const credits =
+        await getAllRecords(
+            "credits"
+        );
+
+
+    const summary =
+        calculateMonthlySummary(
+            year,
+            month,
+            movements,
+            credits
+        );
+
+
+    const minimum =
+        calculateMonthlyMinimumBalance(
+            year,
+            month,
+            movements,
+            credits
+        );
+
+
+    const monthlyIncome =
+        document.getElementById(
+            "monthlyIncome"
+        );
+
+
+    const monthlyExpenses =
+        document.getElementById(
+            "monthlyExpenses"
+        );
+
+
+    const monthlyBalance =
+        document.getElementById(
+            "monthlyBalance"
+        );
+
+
+    /*
+        Determinar si el mes visible
+        pertenece al pasado, presente
+        o futuro.
+    */
+
+    const today =
+        new Date();
+
+
+    const currentYear =
+        today.getFullYear();
+
+
+    const currentMonth =
+        today.getMonth();
+
+
+    const visiblePeriod =
+        year * 12 + month;
+
+
+    const currentPeriod =
+        currentYear * 12 +
+        currentMonth;
+
+
+    /*
+        =================================
+        MES PASADO
+        =================================
+    */
+
+    if (
+        visiblePeriod <
+        currentPeriod
+    ) {
+
+        renderSingleSummaryValue(
+            monthlyIncome,
+            summary.realIncome
+        );
+
+
+        renderSingleSummaryValue(
+            monthlyExpenses,
+            summary.realExpenses
+        );
+
+
+        renderSingleSummaryValue(
+            monthlyBalance,
+            summary.realBalance
+        );
+
+    }
+
+
+    /*
+        =================================
+        MES ACTUAL
+        =================================
+    */
+
+    if (
+        visiblePeriod ===
+        currentPeriod
+    ) {
+
+        renderSummaryRows(
+            monthlyIncome,
+            [
+                {
+                    label:
+                        "Realizados",
+                    value:
+                        summary.realIncome
+                },
+                {
+                    label:
+                        "Programados",
+                    value:
+                        summary.scheduledIncome
+                }
+            ]
+        );
+
+
+        renderSummaryRows(
+            monthlyExpenses,
+            [
+                {
+                    label:
+                        "Realizados",
+                    value:
+                        summary.realExpenses
+                },
+                {
+                    label:
+                        "Programados",
+                    value:
+                        summary.scheduledExpenses
+                }
+            ]
+        );
+
+
+        renderSummaryRows(
+            monthlyBalance,
+            [
+                {
+                    label:
+                        "Realizado",
+                    value:
+                        summary.realBalance
+                },
+                {
+                    label:
+                        "Proyectado",
+                    value:
+                        summary.projectedBalance
+                }
+            ]
+        );
+
+    }
+
+
+    /*
+        =================================
+        MES FUTURO
+        =================================
+    */
+
+    if (
+        visiblePeriod >
+        currentPeriod
+    ) {
+
+        renderSingleSummaryValue(
+            monthlyIncome,
+            summary.scheduledIncome,
+            "Programados"
+        );
+
+
+        renderSingleSummaryValue(
+            monthlyExpenses,
+            summary.scheduledExpenses,
+            "Programados"
+        );
+
+
+        renderSingleSummaryValue(
+            monthlyBalance,
+            summary.scheduledBalance,
+            "Proyectado"
+        );
+
+    }
+
+
+    const minimumBalance =
+        document.getElementById(
+            "minimumBalance"
+        );
+
+
+    const minimumBalanceDate =
+        document.getElementById(
+            "minimumBalanceDate"
+        );
+
+
+    if (
+        minimum.balance === null
+    ) {
+
+        minimumBalance.textContent =
+            "Sin cálculo";
+
+
+        minimumBalanceDate.textContent =
+            "";
+
+        return;
+
+    }
+
+
+    minimumBalance.textContent =
+        formatCurrency(
+            minimum.balance
+        );
+
+
+    minimumBalanceDate.textContent =
+        formatShortDate(
+            minimum.date
+        );
+
+}
+
+
+/*
+    Muestra un único valor
+    dentro de una tarjeta.
+*/
+
+function renderSingleSummaryValue(
+    element,
+    value,
+    label = null
+) {
+
+    element.innerHTML =
+        "";
+
+
+    if (!label) {
+
+        element.textContent =
+            formatCurrency(
+                value
+            );
+
+        return;
+
+    }
+
+
+    const row =
+        document.createElement(
+            "span"
+        );
+
+
+    row.classList.add(
+        "summary-value-row"
+    );
+
+
+    const labelElement =
+        document.createElement(
+            "span"
+        );
+
+
+    labelElement.classList.add(
+        "summary-value-row-label"
+    );
+
+
+    labelElement.textContent =
+        label;
+
+
+    const valueElement =
+        document.createElement(
+            "span"
+        );
+
+
+    valueElement.textContent =
+        formatCurrency(
+            value
+        );
+
+
+    row.appendChild(
+        labelElement
+    );
+
+
+    row.appendChild(
+        valueElement
+    );
+
+
+    element.appendChild(
+        row
+    );
+
+}
+
+
+/*
+    Muestra varias filas dentro
+    de una tarjeta resumen.
+*/
+
+function renderSummaryRows(
+    element,
+    rows
+) {
+
+    element.innerHTML =
+        "";
+
+
+    rows.forEach(
+        rowData => {
+
+            const row =
+                document.createElement(
+                    "span"
+                );
+
+
+            row.classList.add(
+                "summary-value-row"
+            );
+
+
+            const label =
+                document.createElement(
+                    "span"
+                );
+
+
+            label.classList.add(
+                "summary-value-row-label"
+            );
+
+
+            label.textContent =
+                rowData.label;
+
+
+            const value =
+                document.createElement(
+                    "span"
+                );
+
+
+            value.textContent =
+                formatCurrency(
+                    rowData.value
+                );
+
+
+            row.appendChild(
+                label
+            );
+
+
+            row.appendChild(
+                value
+            );
+
+
+            element.appendChild(
+                row
+            );
+
+        }
+    );
+
+}
+
+
+function formatShortDate(
+    dateString
+) {
+
+    const [
+        year,
+        month,
+        day
+    ] =
+        dateString
+            .split("-")
+            .map(Number);
+
+
+    return new Intl.DateTimeFormat(
+        "es-MX",
+        {
+            day:
+                "numeric",
+
+            month:
+                "long",
+
+            year:
+                "numeric"
+        }
+    ).format(
+        new Date(
+            year,
+            month - 1,
+            day
+        )
+    );
+
+}
+
+
+export async function updateCurrentBalance() {
+
+    const movements =
+        await getAllRecords(
+            "movements"
+        );
+
+
+    const today =
+        getLocalDateString();
+
+
+    const balance =
+        calculateDailyBalance(
+            today,
+            movements
+        );
+
+
+    if (
+        balance.accumulatedBalance ===
+        null
+    ) {
+
+        updateBalanceDisplay(
+            0
+        );
+
+        return;
+
+    }
+
+
+    updateBalanceDisplay(
+        balance.accumulatedBalance
+    );
+
+}
+
+
+/*
+    Cargar créditos desde IndexedDB.
+*/
+
+async function loadCredits(
+    creditSelector,
+    creditPaymentSelector,
+    creditsList
+) {
+
+    const credits =
+        await getAllRecords(
+            "credits"
+        );
+
+
+    const activeCredits =
+        credits.filter(
+            credit =>
+                credit.active === true
+        );
+
+
+    /*
+        -----------------------------
+        Actualizar selector
+        de nuevo movimiento.
+        -----------------------------
+    */
+
+    creditSelector.innerHTML = "";
+
+    creditPaymentSelector.innerHTML = "";
+
+
+    if (
+        activeCredits.length === 0
+    ) {
+
+        const option =
+            document.createElement(
+                "option"
+            );
+
+
+        option.value = "";
+
+        option.textContent =
+            "No hay créditos configurados";
+
+
+        creditSelector.appendChild(
+            option
+        );
+
+
+        creditSelector.disabled =
+            true;
+
+        const paymentOption =
+            document.createElement(
+                "option"
+            );
+
+
+        paymentOption.value = "";
+
+        paymentOption.textContent =
+            "No hay créditos configurados";
+
+
+        creditPaymentSelector.appendChild(
+            paymentOption
+        );
+
+
+        creditPaymentSelector.disabled =
+            true;
+
+    } else {
+
+        creditSelector.disabled =
+            false;
+
+        creditPaymentSelector.disabled =
+            false;
+
+
+        const placeholder =
+            document.createElement(
+                "option"
+            );
+
+
+        placeholder.value = "";
+
+        placeholder.textContent =
+            "Selecciona un crédito";
+
+
+        creditSelector.appendChild(
+            placeholder
+        );
+
+        const paymentPlaceholder =
+            document.createElement(
+                "option"
+            );
+
+
+        paymentPlaceholder.value = "";
+
+        paymentPlaceholder.textContent =
+            "Selecciona un crédito";
+
+
+        creditPaymentSelector.appendChild(
+            paymentPlaceholder
+        );
+
+
+        activeCredits.forEach(
+            credit => {
+
+                /*
+                    Selector para compras.
+                */
+
+                const option =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                option.value =
+                    credit.id;
+
+
+                option.textContent =
+                    credit.name;
+
+
+                creditSelector.appendChild(
+                    option
+                );
+
+
+                /*
+                    Selector para pagos.
+                */
+
+                const paymentOption =
+                    document.createElement(
+                        "option"
+                    );
+
+
+                paymentOption.value =
+                    credit.id;
+
+
+                paymentOption.textContent =
+                    credit.name;
+
+
+                creditPaymentSelector
+                    .appendChild(
+                        paymentOption
+                    );
+
+            }
+        );
+
+    }
+
+
+    /*
+        -----------------------------
+        Mostrar créditos registrados.
+        -----------------------------
+    */
+
+    creditsList.innerHTML = "";
+
+
+    if (
+        credits.length === 0
+    ) {
+
+        const emptyMessage =
+            document.createElement(
+                "p"
+            );
+
+
+        emptyMessage.textContent =
+            "Todavía no hay créditos registrados.";
+
+
+        creditsList.appendChild(
+            emptyMessage
+        );
+
+
+        return;
+
+    }
+
+
+    credits.forEach(
+        credit => {
+
+            const item =
+                document.createElement(
+                    "div"
+                );
+
+
+            item.classList.add(
+                "credit-list-item"
+            );
+
+
+            item.innerHTML = `
+                <strong>
+                    ${credit.name}
+                </strong>
+
+                <div>
+                    Límite:
+                    ${formatCurrency(
+                        credit.creditLimit
+                    )}
+                </div>
+
+                <div>
+                    Corte:
+                    día ${credit.closingDay}
+                </div>
+
+                <div>
+                    FLP:
+                    día ${credit.paymentDueDay}
+                </div>
+            `;
+
+
+            creditsList.appendChild(
+                item
+            );
+
+        }
+    );
+
+}
+
+
+/*
+    Actualiza el saldo mostrado
+    en el dashboard.
+*/
+
+function updateBalanceDisplay(
+    balance
+) {
+
+    const currentBalance =
+        document.getElementById(
+            "currentBalance"
+        );
+
+
+    currentBalance.textContent =
+        formatCurrency(balance);
+
+}
+
+
+/*
+    Convierte un número a formato monetario.
+*/
+
+function formatCurrency(
+    amount
+) {
+
+    return new Intl.NumberFormat(
+        "es-MX",
+        {
+            style: "currency",
+            currency: "MXN"
+        }
+    ).format(amount);
+
+}
+
+
+export function showNotification(
+    message,
+    type = "success"
+) {
+
+    const notification =
+        document.getElementById(
+            "appNotification"
+        );
+
+
+    if (!notification) {
+
+        return;
+
+    }
+
+
+    notification.textContent =
+        message;
+
+
+    notification.classList.remove(
+        "hidden",
+        "success",
+        "error"
+    );
+
+
+    notification.classList.add(
+        type
+    );
+
+
+    setTimeout(
+        () => {
+
+            notification.classList.add(
+                "hidden"
+            );
+
+        },
+        2500
+    );
+
+}
+
+
+/*
+    Obtiene la fecha local del navegador
+    en formato YYYY-MM-DD.
+
+    No usamos toISOString() porque puede
+    cambiar la fecha debido a UTC.
+*/
+
+function getLocalDateString() {
+
+    const date =
+        new Date();
+
+
+    const year =
+        date.getFullYear();
+
+
+    const month =
+        String(
+            date.getMonth() + 1
+        ).padStart(2, "0");
+
+
+    const day =
+        String(
+            date.getDate()
+        ).padStart(2, "0");
+
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+export function showConfirmDialog({
+    title = "Confirmar acción",
+    message = "¿Deseas continuar?",
+    confirmText = "Confirmar",
+    cancelText = "Cancelar"
+} = {}) {
+
+    return new Promise(
+        resolve => {
+
+            const modal =
+                document.getElementById(
+                    "confirmModal"
+                );
+
+
+            const titleElement =
+                document.getElementById(
+                    "confirmModalTitle"
+                );
+
+
+            const messageElement =
+                document.getElementById(
+                    "confirmModalMessage"
+                );
+
+
+            const acceptButton =
+                document.getElementById(
+                    "acceptConfirmButton"
+                );
+
+
+            const cancelButton =
+                document.getElementById(
+                    "cancelConfirmButton"
+                );
+
+
+            const closeButton =
+                document.getElementById(
+                    "closeConfirmModalButton"
+                );
+
+
+            titleElement.textContent =
+                title;
+
+
+            messageElement.textContent =
+                message;
+
+
+            acceptButton.textContent =
+                confirmText;
+
+
+            cancelButton.textContent =
+                cancelText;
+
+
+            /*
+                Terminamos la confirmación
+                y retiramos listeners.
+
+                Esto evita acumular listeners
+                cada vez que abrimos el modal.
+            */
+
+            function finish(
+                result
+            ) {
+
+                modal.classList.add(
+                    "hidden"
+                );
+
+
+                acceptButton.removeEventListener(
+                    "click",
+                    accept
+                );
+
+
+                cancelButton.removeEventListener(
+                    "click",
+                    cancel
+                );
+
+
+                closeButton.removeEventListener(
+                    "click",
+                    cancel
+                );
+
+
+                resolve(
+                    result
+                );
+
+            }
+
+
+            function accept() {
+
+                finish(
+                    true
+                );
+
+            }
+
+
+            function cancel() {
+
+                finish(
+                    false
+                );
+
+            }
+
+
+            acceptButton.addEventListener(
+                "click",
+                accept
+            );
+
+
+            cancelButton.addEventListener(
+                "click",
+                cancel
+            );
+
+
+            closeButton.addEventListener(
+                "click",
+                cancel
+            );
+
+
+            modal.classList.remove(
+                "hidden"
+            );
+
+        }
+    );
+
+}

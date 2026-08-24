@@ -1,0 +1,27 @@
+{
+    "name": "Control de Gastos",
+    "short_name": "Gastos",
+    "description": "Control personal de ingresos, gastos, créditos y proyecciones financieras.",
+    "start_url": "./",
+    "scope": "./",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "lang": "es-MX",
+    "orientation": "any",
+
+    "icons": [
+        {
+            "src": "./assets/icons/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "./assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        }
+    ]
+}
