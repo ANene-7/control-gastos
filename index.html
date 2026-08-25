@@ -27,39 +27,83 @@
 
         <div class="header-actions">
 
+            <!-- Vista mensual de movimientos -->
             <button
-                id="settingsButton"
-                class="secondary-button header-button">
+                id="monthlyMovementsButton"
+                class="secondary-button header-button monthly-movements-button">
 
                 <span class="header-button-icon">
-                    ⚙
+                    ☷
                 </span>
 
                 <span>
-                    Configuración
+                    Movimientos
                 </span>
 
             </button>
 
 
-            <button
-                id="creditsButton"
-                class="secondary-button header-button">
+            <!-- Menú secundario -->
+            <div
+                id="headerMenu"
+                class="header-menu">
 
-                <span class="header-button-icon">
-                    ◇
-                </span>
+                <!-- Sólo visible en móvil -->
+                <button
+                    id="headerMenuButton"
+                    class="secondary-button header-button header-menu-button"
+                    aria-label="Más opciones"
+                    aria-expanded="false">
 
-                <span>
-                    Créditos
-                </span>
+                    <span class="header-menu-icon">
+                        ☰
+                    </span>
 
-            </button>
+                </button>
 
 
+                <div
+                    id="headerMenuPanel"
+                    class="header-menu-panel">
+
+                    <button
+                        id="settingsButton"
+                        class="secondary-button header-button">
+
+                        <span class="header-button-icon">
+                            ⚙
+                        </span>
+
+                        <span>
+                            Configuración
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        id="creditsButton"
+                        class="secondary-button header-button">
+
+                        <span class="header-button-icon">
+                            ◇
+                        </span>
+
+                        <span>
+                            Créditos
+                        </span>
+
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <!-- Acción principal -->
             <button
                 id="addMovementButton"
-                class="primary-button header-button">
+                class="primary-button header-button add-movement-header-button">
 
                 <span class="header-button-icon">
                     +
@@ -882,6 +926,39 @@
             class="credits-list">
         </div>
 
+
+        <div class="inactive-credits-section">
+
+            <button
+                type="button"
+                id="inactiveCreditsMenuButton"
+                class="secondary-button inactive-credits-menu-button"
+                aria-expanded="false">
+
+                <span>
+                    ☰
+                </span>
+
+                <span>
+                    Créditos inactivos
+                </span>
+
+            </button>
+
+
+            <div
+                id="inactiveCreditsPanel"
+                class="inactive-credits-panel hidden">
+
+                <div
+                    id="inactiveCreditsList"
+                    class="credits-list">
+                </div>
+
+            </div>
+
+        </div>
+
     </div>
 
 </div>
@@ -1324,6 +1401,53 @@
             <button
                 type="button"
                 id="closeCreditPurchasesDayButton"
+                class="secondary-button">
+
+                Cerrar
+
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Modal de movimientos del mes -->
+
+<div
+    id="monthlyMovementsModal"
+    class="modal hidden">
+
+    <div class="modal-content monthly-movements-modal-content">
+
+        <div class="modal-header">
+
+            <h2 id="monthlyMovementsTitle">
+                Movimientos del mes
+            </h2>
+
+            <button
+                id="closeMonthlyMovementsModalButton"
+                class="close-button"
+                aria-label="Cerrar">
+                ×
+            </button>
+
+        </div>
+
+
+        <div
+            id="monthlyMovementsContent"
+            class="monthly-movements-content">
+        </div>
+
+
+        <div class="form-actions">
+
+            <button
+                type="button"
+                id="closeMonthlyMovementsButton"
                 class="secondary-button">
 
                 Cerrar

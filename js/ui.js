@@ -19,7 +19,16 @@ import {
 } from "./state.js";
 
 
-export async function initializeUI(settings) {
+/*
+    Crédito que actualmente
+    estamos editando.
+*/
+
+let editingCreditId =
+    null;
+
+
+export async function initializeUI(settings) {  
 
     /*
         ELEMENTOS DEL DOM
@@ -120,6 +129,51 @@ export async function initializeUI(settings) {
             "creditsList"
         );
 
+    const inactiveCreditsList =
+        document.getElementById(
+            "inactiveCreditsList"
+        );
+
+
+    const inactiveCreditsMenuButton =
+        document.getElementById(
+            "inactiveCreditsMenuButton"
+        );
+
+
+    const inactiveCreditsPanel =
+        document.getElementById(
+            "inactiveCreditsPanel"
+        );
+
+
+    /*
+        Mostrar / ocultar
+        créditos inactivos.
+    */
+
+    inactiveCreditsMenuButton.addEventListener(
+        "click",
+        () => {
+
+            const isHidden =
+                inactiveCreditsPanel
+                    .classList
+                    .toggle(
+                        "hidden"
+                    );
+
+
+            inactiveCreditsMenuButton
+                .setAttribute(
+                    "aria-expanded",
+                    String(!isHidden)
+                );
+
+        }
+    );
+
+
     const creditSelector =
         document.getElementById(
             "creditSelector"
@@ -153,6 +207,76 @@ export async function initializeUI(settings) {
         document.getElementById(
             "backupFileInput"
         );
+
+
+    const headerMenu =
+        document.getElementById(
+            "headerMenu"
+        );
+
+
+    const headerMenuButton =
+        document.getElementById(
+            "headerMenuButton"
+        );
+
+
+    /*
+        =================================
+        MENÚ MÓVIL DEL HEADER
+        =================================
+    */
+
+    headerMenuButton.addEventListener(
+        "click",
+        event => {
+
+            event.stopPropagation();
+
+
+            const isOpen =
+                headerMenu.classList.toggle(
+                    "open"
+                );
+
+
+            headerMenuButton.setAttribute(
+                "aria-expanded",
+                String(isOpen)
+            );
+
+        }
+    );
+
+
+    /*
+        Cerrar al pulsar fuera.
+    */
+
+    document.addEventListener(
+        "click",
+        event => {
+
+            if (
+                !headerMenu.contains(
+                    event.target
+                )
+            ) {
+
+                headerMenu.classList.remove(
+                    "open"
+                );
+
+
+                headerMenuButton.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+
+            }
+
+        }
+    );
 
 
     /*
@@ -518,6 +642,17 @@ export async function initializeUI(settings) {
         "click",
         () => {
 
+            headerMenu.classList.remove(
+                "open"
+            );
+
+
+            headerMenuButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
+
             creditsModal.classList.remove(
                 "hidden"
             );
@@ -534,6 +669,13 @@ export async function initializeUI(settings) {
         "click",
         () => {
 
+            editingCreditId =
+                null;
+
+
+            creditForm.reset();
+
+
             creditsModal.classList.add(
                 "hidden"
             );
@@ -545,6 +687,13 @@ export async function initializeUI(settings) {
     cancelCreditButton.addEventListener(
         "click",
         () => {
+
+            editingCreditId =
+                null;
+
+
+            creditForm.reset();
+
 
             creditsModal.classList.add(
                 "hidden"
@@ -666,27 +815,88 @@ export async function initializeUI(settings) {
                     Crear objeto del crédito.
                 */
 
-                const credit = {
+                let credit;
 
-                    id:
-                        crypto.randomUUID(),
 
-                    name,
+                /*
+                    Si estamos editando,
+                    conservar el mismo ID.
+                */
 
-                    type,
+                if (
+                    editingCreditId
+                ) {
 
-                    creditLimit,
+                    const existingCredits =
+                        await getAllRecords(
+                            "credits"
+                        );
 
-                    closingDay,
 
-                    paymentDueDay,
+                    const existingCredit =
+                        existingCredits.find(
+                            item =>
+                                item.id ===
+                                editingCreditId
+                        );
 
-                    active: true,
 
-                    createdAt:
-                        new Date().toISOString()
+                    if (!existingCredit) {
 
-                };
+                        throw new Error(
+                            "No se encontró el crédito que deseas editar."
+                        );
+
+                    }
+
+
+                    credit = {
+
+                        ...existingCredit,
+
+                        name,
+
+                        type,
+
+                        creditLimit,
+
+                        closingDay,
+
+                        paymentDueDay,
+
+                        updatedAt:
+                            new Date()
+                                .toISOString()
+
+                    };
+
+                } else {
+
+                    credit = {
+
+                        id:
+                            crypto.randomUUID(),
+
+                        name,
+
+                        type,
+
+                        creditLimit,
+
+                        closingDay,
+
+                        paymentDueDay,
+
+                        active:
+                            true,
+
+                        createdAt:
+                            new Date()
+                                .toISOString()
+
+                    };
+
+                }
 
 
                 /*
@@ -698,6 +908,8 @@ export async function initializeUI(settings) {
                     credit
                 );
 
+                editingCreditId =
+                    null;
 
                 /*
                     Limpiar formulario.
@@ -713,7 +925,8 @@ export async function initializeUI(settings) {
                 await loadCredits(
                     creditSelector,
                     creditPaymentSelector,
-                    creditsList
+                    creditsList,
+                    inactiveCreditsList
                 );
 
 
@@ -828,6 +1041,17 @@ export async function initializeUI(settings) {
     settingsButton.addEventListener(
         "click",
         () => {
+
+            headerMenu.classList.remove(
+                "open"
+            );
+
+
+            headerMenuButton.setAttribute(
+                "aria-expanded",
+                "false"
+            );
+
 
             settingsModal
                 .classList
@@ -1004,7 +1228,8 @@ export async function initializeUI(settings) {
     await loadCredits(
         creditSelector,
         creditPaymentSelector,
-        creditsList
+        creditsList,
+        inactiveCreditsList
     );
 
 }
@@ -1513,8 +1738,13 @@ export async function updateCurrentBalance() {
 async function loadCredits(
     creditSelector,
     creditPaymentSelector,
-    creditsList
+    creditsList,
+    inactiveCreditsList
 ) {
+
+    /*
+        Obtener créditos registrados.
+    */
 
     const credits =
         await getAllRecords(
@@ -1522,48 +1752,66 @@ async function loadCredits(
         );
 
 
+    /*
+        Consideramos activos también
+        los créditos antiguos que todavía
+        no tengan la propiedad "active".
+    */
+
     const activeCredits =
         credits.filter(
             credit =>
-                credit.active === true
+                credit.active !== false
+        );
+
+
+    const inactiveCredits =
+        credits.filter(
+            credit =>
+                credit.active === false
         );
 
 
     /*
-        -----------------------------
-        Actualizar selector
-        de nuevo movimiento.
-        -----------------------------
+        =================================
+        ACTUALIZAR SELECTORES
+        =================================
     */
 
-    creditSelector.innerHTML = "";
+    creditSelector.innerHTML =
+        "";
 
-    creditPaymentSelector.innerHTML = "";
+
+    creditPaymentSelector.innerHTML =
+        "";
 
 
     if (
         activeCredits.length === 0
     ) {
 
-        const option =
+        const purchaseOption =
             document.createElement(
                 "option"
             );
 
 
-        option.value = "";
+        purchaseOption.value =
+            "";
 
-        option.textContent =
+
+        purchaseOption.textContent =
             "No hay créditos configurados";
 
 
         creditSelector.appendChild(
-            option
+            purchaseOption
         );
 
 
         creditSelector.disabled =
             true;
+
 
         const paymentOption =
             document.createElement(
@@ -1571,7 +1819,9 @@ async function loadCredits(
             );
 
 
-        paymentOption.value = "";
+        paymentOption.value =
+            "";
+
 
         paymentOption.textContent =
             "No hay créditos configurados";
@@ -1590,25 +1840,29 @@ async function loadCredits(
         creditSelector.disabled =
             false;
 
+
         creditPaymentSelector.disabled =
             false;
 
 
-        const placeholder =
+        const purchasePlaceholder =
             document.createElement(
                 "option"
             );
 
 
-        placeholder.value = "";
+        purchasePlaceholder.value =
+            "";
 
-        placeholder.textContent =
+
+        purchasePlaceholder.textContent =
             "Selecciona un crédito";
 
 
         creditSelector.appendChild(
-            placeholder
+            purchasePlaceholder
         );
+
 
         const paymentPlaceholder =
             document.createElement(
@@ -1616,7 +1870,9 @@ async function loadCredits(
             );
 
 
-        paymentPlaceholder.value = "";
+        paymentPlaceholder.value =
+            "";
+
 
         paymentPlaceholder.textContent =
             "Selecciona un crédito";
@@ -1630,32 +1886,24 @@ async function loadCredits(
         activeCredits.forEach(
             credit => {
 
-                /*
-                    Selector para compras.
-                */
-
-                const option =
+                const purchaseOption =
                     document.createElement(
                         "option"
                     );
 
 
-                option.value =
+                purchaseOption.value =
                     credit.id;
 
 
-                option.textContent =
+                purchaseOption.textContent =
                     credit.name;
 
 
                 creditSelector.appendChild(
-                    option
+                    purchaseOption
                 );
 
-
-                /*
-                    Selector para pagos.
-                */
 
                 const paymentOption =
                     document.createElement(
@@ -1671,10 +1919,9 @@ async function loadCredits(
                     credit.name;
 
 
-                creditPaymentSelector
-                    .appendChild(
-                        paymentOption
-                    );
+                creditPaymentSelector.appendChild(
+                    paymentOption
+                );
 
             }
         );
@@ -1683,16 +1930,17 @@ async function loadCredits(
 
 
     /*
-        -----------------------------
-        Mostrar créditos registrados.
-        -----------------------------
+        =================================
+        MOSTRAR CRÉDITOS ACTIVOS
+        =================================
     */
 
-    creditsList.innerHTML = "";
+    creditsList.innerHTML =
+        "";
 
 
     if (
-        credits.length === 0
+        activeCredits.length === 0
     ) {
 
         const emptyMessage =
@@ -1702,63 +1950,513 @@ async function loadCredits(
 
 
         emptyMessage.textContent =
-            "Todavía no hay créditos registrados.";
+            "No hay créditos activos.";
 
 
         creditsList.appendChild(
             emptyMessage
         );
 
+    } else {
 
-        return;
+        activeCredits.forEach(
+            credit => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                item.classList.add(
+                    "credit-list-item"
+                );
+
+
+                item.innerHTML = `
+                    <div class="credit-list-header">
+
+                        <strong>
+                            ${credit.name}
+                        </strong>
+
+                    </div>
+
+                    <div class="credit-list-data">
+
+                        <div>
+                            Límite:
+                            ${formatCurrency(
+                                credit.creditLimit
+                            )}
+                        </div>
+
+                        <div>
+                            Corte:
+                            día ${credit.closingDay}
+                        </div>
+
+                        <div>
+                            FLP:
+                            día ${credit.paymentDueDay}
+                        </div>
+
+                    </div>
+                `;
+
+
+                const actions =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                actions.classList.add(
+                    "credit-list-actions"
+                );
+
+
+                const editButton =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                editButton.type =
+                    "button";
+
+
+                editButton.classList.add(
+                    "secondary-button"
+                );
+
+
+                editButton.textContent =
+                    "Editar";
+
+
+                const deactivateButton =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                deactivateButton.type =
+                    "button";
+
+
+                deactivateButton.classList.add(
+                    "secondary-button"
+                );
+
+
+                deactivateButton.textContent =
+                    "Cancelar crédito";
+
+
+                /*
+                    EDITAR
+                */
+
+                editButton.addEventListener(
+                    "click",
+                    () => {
+
+                        editingCreditId =
+                            credit.id;
+
+
+                        document
+                            .getElementById(
+                                "creditName"
+                            )
+                            .value =
+                                credit.name;
+
+
+                        document
+                            .getElementById(
+                                "creditType"
+                            )
+                            .value =
+                                credit.type;
+
+
+                        document
+                            .getElementById(
+                                "creditLimit"
+                            )
+                            .value =
+                                credit.creditLimit;
+
+
+                        document
+                            .getElementById(
+                                "creditClosingDay"
+                            )
+                            .value =
+                                credit.closingDay;
+
+
+                        document
+                            .getElementById(
+                                "creditPaymentDueDay"
+                            )
+                            .value =
+                                credit.paymentDueDay;
+
+
+                        creditForm.scrollIntoView({
+                            behavior:
+                                "smooth",
+
+                            block:
+                                "start"
+                        });
+
+                    }
+                );
+
+
+                /*
+                    DESACTIVAR
+                */
+
+                deactivateButton.addEventListener(
+                    "click",
+                    async () => {
+
+                        try {
+
+                            const confirmed =
+                                await showConfirmDialog({
+
+                                    title:
+                                        "Cancelar crédito",
+
+                                    message:
+                                        `¿Deseas mover "${credit.name}" ` +
+                                        `a créditos inactivos? ` +
+                                        `Su historial y movimientos se conservarán.`,
+
+                                    confirmText:
+                                        "Cancelar crédito",
+
+                                    cancelText:
+                                        "Volver"
+
+                                });
+
+
+                            if (!confirmed) {
+
+                                return;
+
+                            }
+
+
+                            const updatedCredit = {
+
+                                ...credit,
+
+                                active:
+                                    false,
+
+                                deactivatedAt:
+                                    new Date()
+                                        .toISOString()
+
+                            };
+
+
+                            await saveRecord(
+                                "credits",
+                                updatedCredit
+                            );
+
+
+                            if (
+                                editingCreditId ===
+                                credit.id
+                            ) {
+
+                                editingCreditId =
+                                    null;
+
+
+                                creditForm.reset();
+
+                            }
+
+
+                            await loadCredits(
+                                creditSelector,
+                                creditPaymentSelector,
+                                creditsList,
+                                inactiveCreditsList
+                            );
+
+
+                            showNotification(
+                                "Crédito movido a inactivos."
+                            );
+
+
+                            await renderCalendar();
+
+
+                        } catch (error) {
+
+                            console.error(
+                                "No se pudo cancelar el crédito:",
+                                error
+                            );
+
+
+                            showNotification(
+                                "No se pudo cancelar el crédito.",
+                                "error"
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                actions.appendChild(
+                    editButton
+                );
+
+
+                actions.appendChild(
+                    deactivateButton
+                );
+
+
+                item.appendChild(
+                    actions
+                );
+
+
+                creditsList.appendChild(
+                    item
+                );
+
+            }
+        );
 
     }
 
 
-    credits.forEach(
-        credit => {
+    /*
+        =================================
+        MOSTRAR CRÉDITOS INACTIVOS
+        =================================
+    */
 
-            const item =
-                document.createElement(
-                    "div"
+    inactiveCreditsList.innerHTML =
+        "";
+
+
+    if (
+        inactiveCredits.length === 0
+    ) {
+
+        const emptyMessage =
+            document.createElement(
+                "p"
+            );
+
+
+        emptyMessage.textContent =
+            "No hay créditos inactivos.";
+
+
+        inactiveCreditsList.appendChild(
+            emptyMessage
+        );
+
+    } else {
+
+        inactiveCredits.forEach(
+            credit => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+
+                item.classList.add(
+                    "credit-list-item",
+                    "inactive-credit-item"
                 );
 
 
-            item.classList.add(
-                "credit-list-item"
-            );
+                item.innerHTML = `
+                    <div class="credit-list-header">
+
+                        <strong>
+                            ${credit.name}
+                        </strong>
+
+                    </div>
+
+                    <div class="credit-list-data">
+
+                        <div>
+                            Límite:
+                            ${formatCurrency(
+                                credit.creditLimit
+                            )}
+                        </div>
+
+                        <div>
+                            Corte:
+                            día ${credit.closingDay}
+                        </div>
+
+                        <div>
+                            FLP:
+                            día ${credit.paymentDueDay}
+                        </div>
+
+                    </div>
+                `;
 
 
-            item.innerHTML = `
-                <strong>
-                    ${credit.name}
-                </strong>
-
-                <div>
-                    Límite:
-                    ${formatCurrency(
-                        credit.creditLimit
-                    )}
-                </div>
-
-                <div>
-                    Corte:
-                    día ${credit.closingDay}
-                </div>
-
-                <div>
-                    FLP:
-                    día ${credit.paymentDueDay}
-                </div>
-            `;
+                const actions =
+                    document.createElement(
+                        "div"
+                    );
 
 
-            creditsList.appendChild(
-                item
-            );
+                actions.classList.add(
+                    "credit-list-actions"
+                );
 
-        }
-    );
+
+                const reactivateButton =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                reactivateButton.type =
+                    "button";
+
+
+                reactivateButton.classList.add(
+                    "secondary-button"
+                );
+
+
+                reactivateButton.textContent =
+                    "Reactivar";
+
+
+                reactivateButton.addEventListener(
+                    "click",
+                    async () => {
+
+                        try {
+
+                            const confirmed =
+                                await showConfirmDialog({
+
+                                    title:
+                                        "Reactivar crédito",
+
+                                    message:
+                                        `¿Deseas volver a activar "${credit.name}"?`,
+
+                                    confirmText:
+                                        "Reactivar",
+
+                                    cancelText:
+                                        "Cancelar"
+
+                                });
+
+
+                            if (!confirmed) {
+
+                                return;
+
+                            }
+
+
+                            const updatedCredit = {
+
+                                ...credit,
+
+                                active:
+                                    true,
+
+                                reactivatedAt:
+                                    new Date()
+                                        .toISOString()
+
+                            };
+
+
+                            await saveRecord(
+                                "credits",
+                                updatedCredit
+                            );
+
+
+                            await loadCredits(
+                                creditSelector,
+                                creditPaymentSelector,
+                                creditsList,
+                                inactiveCreditsList
+                            );
+
+
+                            showNotification(
+                                "Crédito reactivado correctamente."
+                            );
+
+
+                        } catch (error) {
+
+                            console.error(
+                                "No se pudo reactivar el crédito:",
+                                error
+                            );
+
+
+                            showNotification(
+                                "No se pudo reactivar el crédito.",
+                                "error"
+                            );
+
+                        }
+
+                    }
+                );
+
+
+                actions.appendChild(
+                    reactivateButton
+                );
+
+
+                item.appendChild(
+                    actions
+                );
+
+
+                inactiveCreditsList.appendChild(
+                    item
+                );
+
+            }
+        );
+
+    }
 
 }
 

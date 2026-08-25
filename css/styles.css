@@ -389,6 +389,24 @@ button:active {
 }
 
 
+.header-menu {
+    display: flex;
+    align-items: center;
+}
+
+
+.header-menu-panel {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+
+.header-menu-button {
+    display: none;
+}
+
+
 /* ================================
    SUMMARY
 ================================ */
@@ -2005,6 +2023,460 @@ textarea {
         var(--color-negative);
 }
 
+
+/* ================================
+   MONTHLY MOVEMENTS
+================================ */
+
+.monthly-movements-modal-content {
+
+    width:
+        min(
+            680px,
+            calc(100% - 30px)
+        );
+
+}
+
+
+.monthly-movements-content {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        24px;
+
+}
+
+
+.monthly-movements-section {
+
+    display:
+        flex;
+
+    flex-direction:
+        column;
+
+    gap:
+        7px;
+
+}
+
+
+.monthly-movements-section h3 {
+
+    margin-bottom:
+        3px;
+
+    color:
+        var(--color-primary-800);
+
+    font-size:
+        12px;
+
+    font-weight:
+        750;
+
+    letter-spacing:
+        0.05em;
+
+    text-transform:
+        uppercase;
+
+}
+
+
+.monthly-movement-row {
+
+    display:
+        grid;
+
+    grid-template-columns:
+        70px
+        minmax(0, 1fr)
+        auto;
+
+    align-items:
+        center;
+
+    gap:
+        12px;
+
+    padding:
+        10px 12px;
+
+    border:
+        1px solid
+        var(--color-border);
+
+    border-radius:
+        9px;
+
+    background:
+        var(--color-surface);
+
+}
+
+
+.monthly-movement-clickable {
+
+    cursor:
+        pointer;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease;
+
+}
+
+
+.monthly-movement-clickable:hover {
+
+    background:
+        var(--color-surface-hover);
+
+    border-color:
+        var(--color-border-strong);
+
+}
+
+
+.monthly-movement-clickable:active {
+
+    transform:
+        translateY(1px);
+
+}
+
+
+.monthly-movement-date {
+
+    color:
+        var(--color-text-secondary);
+
+    font-size:
+        12px;
+
+    font-weight:
+        600;
+
+}
+
+
+.monthly-movement-info {
+
+    min-width:
+        0;
+
+}
+
+
+.monthly-movement-info strong {
+
+    display:
+        block;
+
+    overflow:
+        hidden;
+
+    color:
+        var(--color-text);
+
+    font-size:
+        13px;
+
+    text-overflow:
+        ellipsis;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.monthly-movement-info small {
+
+    display:
+        block;
+
+    margin-top:
+        2px;
+
+    color:
+        var(--color-text-muted);
+
+    font-size:
+        10px;
+
+}
+
+
+.monthly-movement-amount {
+
+    font-size:
+        13px;
+
+    font-weight:
+        750;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.monthly-movement-income {
+
+    color:
+        var(--color-positive);
+
+}
+
+
+.monthly-movement-expense {
+
+    color:
+        var(--color-negative);
+
+}
+
+
+.monthly-movements-empty {
+
+    padding:
+        20px;
+
+    color:
+        var(--color-text-secondary);
+
+    text-align:
+        center;
+
+}
+
+
+.credit-list-item {
+
+    margin-top: 12px;
+
+    padding: 14px;
+
+    background:
+        var(--color-surface-soft);
+
+    border:
+        1px solid
+        var(--color-border);
+
+    border-radius:
+        10px;
+
+}
+
+
+.credit-list-header {
+
+    margin-bottom: 8px;
+
+}
+
+
+.credit-list-header strong {
+
+    color:
+        var(--color-primary-900);
+
+    font-size:
+        14px;
+
+}
+
+
+.credit-list-data {
+
+    display: grid;
+
+    gap: 4px;
+
+    color:
+        var(--color-text-secondary);
+
+    font-size:
+        12px;
+
+}
+
+
+.credit-list-actions {
+
+    display: flex;
+
+    justify-content: flex-end;
+
+    gap: 8px;
+
+    margin-top: 12px;
+
+}
+
+
+/* ================================
+   INACTIVE CREDITS
+================================ */
+
+.inactive-credits-section {
+
+    margin-top:
+        20px;
+
+    padding-top:
+        16px;
+
+    border-top:
+        1px solid
+        var(--color-border);
+
+}
+
+
+.inactive-credits-menu-button {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        8px;
+
+    width:
+        100%;
+
+    justify-content:
+        flex-start;
+
+    background:
+        #eef2f7;
+
+    border-color:
+        #cbd5e1;
+
+    color:
+        #475569;
+
+}
+
+
+.inactive-credits-menu-button:hover {
+
+    background:
+        #e2e8f0;
+
+    border-color:
+        #94a3b8;
+
+}
+
+
+.inactive-credits-panel {
+
+    margin-top:
+        10px;
+
+    padding:
+        10px;
+
+    background:
+        #f8fafc;
+
+    border:
+        1px solid
+        #dbe3ec;
+
+    border-radius:
+        10px;
+
+}
+
+
+.inactive-credit-item {
+
+    position:
+        relative;
+
+    background:
+        #eef2f6;
+
+    border-color:
+        #cbd5e1;
+
+    opacity:
+        0.85;
+
+}
+
+
+/*
+    Indicador visual de estado.
+*/
+
+.inactive-credit-item::before {
+
+    content:
+        "INACTIVO";
+
+    position:
+        absolute;
+
+    top:
+        10px;
+
+    right:
+        10px;
+
+    padding:
+        3px 6px;
+
+    background:
+        #dbe3ec;
+
+    border-radius:
+        5px;
+
+    color:
+        #64748b;
+
+    font-size:
+        9px;
+
+    font-weight:
+        700;
+
+    letter-spacing:
+        0.06em;
+
+}
+
+
+/*
+    Nombre del crédito inactivo.
+*/
+
+.inactive-credit-item
+.credit-list-header strong {
+
+    color:
+        #64748b;
+
+}
+
+
 /* ================================
    TABLET
 ================================ */
@@ -2109,46 +2581,205 @@ textarea {
 
     .header-actions {
 
-        display:
-            grid;
+        display: grid;
 
         grid-template-columns:
-            repeat(
-                3,
-                minmax(0, 1fr)
-            );
+            minmax(0, 1fr)
+            auto
+            minmax(0, 1fr);
 
-        gap:
-            8px;
+        align-items: center;
 
-        width:
-            100%;
+        gap: 8px;
+
+        width: 100%;
+
+    }
+
+
+    /*
+        Acciones principales:
+        izquierda y derecha.
+    */
+
+    .monthly-movements-button {
+
+        grid-column: 1;
+
+        width: 100%;
+
+    }
+
+
+    .add-movement-header-button {
+
+        grid-column: 3;
+
+        width: 100%;
+
+    }
+
+
+    /*
+        Menú hamburguesa central.
+    */
+
+    .header-menu {
+
+        position: relative;
+
+        grid-column: 2;
+
+        display: flex;
+
+        justify-content: center;
+
+    }
+
+
+    .header-menu-button {
+
+        display: flex;
+
+        justify-content: center;
+
+        align-items: center;
+
+        width: 40px;
+        height: 38px;
+
+        padding: 0;
+
+    }
+
+
+    .header-menu-icon {
+
+        font-size: 20px;
+
+        line-height: 1;
+
+    }
+
+
+    /*
+        Configuración y Créditos
+        dejan de ocupar espacio
+        en el header.
+    */
+
+    .header-menu-panel {
+
+        display: none;
+
+        position: absolute;
+
+        top: calc(100% + 8px);
+        right: 0;
+
+        z-index: 1500;
+
+        min-width: 180px;
+
+        flex-direction: column;
+
+        align-items: stretch;
+
+        gap: 6px;
+
+        padding: 8px;
+
+        background:
+            var(--color-surface);
+
+        border:
+            1px solid
+            var(--color-border);
+
+        border-radius:
+            10px;
+
+        box-shadow:
+            0 12px 30px
+            rgba(8, 20, 38, 0.18);
+
+    }
+
+
+    /*
+        Mostrar dropdown.
+    */
+
+    .header-menu.open
+    .header-menu-panel {
+
+        display: flex;
+
+    }
+
+
+    /*
+        Los botones del dropdown
+        deben verse como elementos
+        sobre fondo blanco.
+    */
+
+    .app-header
+    .header-menu-panel
+    .secondary-button {
+
+        justify-content: flex-start;
+
+        width: 100%;
+
+        padding: 10px 12px;
+
+        background:
+            transparent;
+
+        color:
+            var(--color-text);
+
+        border:
+            none;
+
+        text-align: left;
+
+    }
+
+
+    .app-header
+    .header-menu-panel
+    .secondary-button:hover {
+
+        background:
+            var(--color-surface-hover);
+
+        color:
+            var(--color-primary-900);
 
     }
 
 
     .header-button {
 
-        min-width:
-            0;
+        min-width: 0;
 
-        display:
-            flex;
+        display: flex;
 
-        justify-content:
-            center;
+        justify-content: center;
 
-        align-items:
-            center;
+        align-items: center;
 
-        gap:
-            5px;
+        gap: 5px;
 
-        padding:
-            9px 6px;
+        min-height: 38px;
 
-        font-size:
-            11px;
+        padding: 9px 7px;
+
+        font-size: 11px;
+
+        white-space: nowrap;
 
     }
 
@@ -2721,6 +3352,70 @@ textarea {
 
     .credit-obligation-amount {
         display: none;
+    }
+
+
+    .monthly-movements-modal-content {
+
+        width:
+            calc(100% - 16px);
+
+    }
+
+
+    .monthly-movement-row {
+
+        grid-template-columns:
+            52px
+            minmax(0, 1fr);
+
+        gap:
+            8px;
+
+        padding:
+            10px;
+
+    }
+
+
+    /*
+        En móvil el importe pasa debajo
+        de la información principal.
+    */
+
+    .monthly-movement-amount {
+
+        grid-column:
+            2;
+
+        font-size:
+            12px;
+
+    }
+
+
+    .monthly-movement-date {
+
+        grid-row:
+            1 / span 2;
+
+        align-self:
+            start;
+
+        padding-top:
+            2px;
+
+        font-size:
+            10px;
+
+    }
+
+
+    .monthly-movement-info strong {
+
+        font-size:
+            12px;
+
     }
 
 }

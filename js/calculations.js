@@ -304,13 +304,209 @@ export function calculateDailyBalance(
 
 
 /*
-    Calcula los ingresos, egresos
-    y balance REAL de un mes.
+    Calcula el saldo que debe mostrarse
+    en el calendario.
 
-    Las compras realizadas directamente
-    con TDC no cuentan todavía como salida
-    de dinero disponible.
+    Pasado y hoy:
+        utiliza movimientos reales.
+
+    Futuro:
+        utiliza movimientos programados
+        y obligaciones pendientes de crédito.
 */
+
+export function calculateCalendarBalance(
+    date,
+    movements = [],
+    credits = []
+) {
+
+    const settings =
+        getSettings();
+
+
+    if (
+        !settings ||
+        date <
+            settings.initialBalanceDate
+    ) {
+
+        return {
+
+            dailyBalance:
+                null,
+
+            accumulatedBalance:
+                null,
+
+            projected:
+                false
+
+        };
+
+    }
+
+
+    const today =
+        getTodayString();
+
+
+    /*
+        =================================
+        PASADO Y HOY
+        =================================
+    */
+
+    if (
+        date <= today
+    ) {
+
+        const realBalance =
+            calculateDailyBalance(
+                date,
+                movements
+            );
+
+
+        return {
+
+            ...realBalance,
+
+            projected:
+                false
+
+        };
+
+    }
+
+
+    /*
+        =================================
+        FUTURO
+        =================================
+
+        Calcular el movimiento previsto
+        específicamente para este día.
+    */
+
+    let dailyBalance =
+        0;
+
+
+    const scheduledMovements =
+        getScheduledMovementsForDate(
+            date,
+            movements
+        );
+
+
+    scheduledMovements.forEach(
+        movement => {
+
+            /*
+                Una compra programada mediante
+                TDC no reduce el dinero disponible
+                el día de la compra.
+            */
+
+            if (
+                movement.paymentMethod ===
+                    "credit"
+                &&
+                movement.type ===
+                    "expense"
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                movement.type ===
+                    "income"
+            ) {
+
+                dailyBalance +=
+                    movement.amount;
+
+            }
+
+
+            if (
+                movement.type ===
+                    "expense"
+            ) {
+
+                dailyBalance -=
+                    movement.amount;
+
+            }
+
+        }
+    );
+
+
+    /*
+        Agregar obligaciones de crédito
+        cuya FLP cae exactamente este día.
+    */
+
+    const creditObligations =
+        calculateCreditObligations(
+            movements,
+            credits
+        );
+
+
+    creditObligations
+        .filter(
+            obligation =>
+
+                obligation.dueDate ===
+                    date
+
+                &&
+
+                obligation.pendingAmount >
+                    0
+        )
+        .forEach(
+            obligation => {
+
+                dailyBalance -=
+                    obligation.pendingAmount;
+
+            }
+        );
+
+
+    /*
+        El acumulado futuro ya lo calcula
+        calculateProjectedBalance().
+    */
+
+    const accumulatedBalance =
+        calculateProjectedBalance(
+            date,
+            movements,
+            credits
+        );
+
+
+    return {
+
+        dailyBalance,
+
+        accumulatedBalance,
+
+        projected:
+            true
+
+    };
+
+}
+
 
 /*
     Calcula el resumen financiero

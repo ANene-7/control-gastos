@@ -17,11 +17,12 @@ import {
 
 import {
     initializeCalendar,
-    renderCalendar
+    renderCalendar,
+    getCurrentCalendarPeriod
 } from "./calendar.js";
 
 import {
-    calculateDailyBalance
+    calculateCalendarBalance
 } from "./calculations.js";
 
 import {
@@ -1958,9 +1959,10 @@ function initializeDayDetailModal() {
                 */
 
                 const balance =
-                    calculateDailyBalance(
+                    calculateCalendarBalance(
                         date,
-                        movements
+                        movements,
+                        credits
                     );
 
 
@@ -1997,7 +1999,9 @@ function initializeDayDetailModal() {
 
 
                 dailyLabel.textContent =
-                    "Saldo del día";
+                    balance.projected
+                        ? "Movimiento previsto del día"
+                        : "Saldo del día";
 
 
                 const dailyValue =
@@ -2061,7 +2065,9 @@ function initializeDayDetailModal() {
 
 
                 accumulatedLabel.textContent =
-                    "Saldo acumulado";
+                    balance.projected
+                        ? "Saldo proyectado"
+                        : "Saldo acumulado";
 
 
                 const accumulatedValue =
@@ -3868,6 +3874,788 @@ function initializeCreditPurchasesDayModal() {
 }
 
 
+function initializeMonthlyMovementsModal() {
+
+    const openButton =
+        document.getElementById(
+            "monthlyMovementsButton"
+        );
+
+
+    const modal =
+        document.getElementById(
+            "monthlyMovementsModal"
+        );
+
+
+    const title =
+        document.getElementById(
+            "monthlyMovementsTitle"
+        );
+
+
+    const content =
+        document.getElementById(
+            "monthlyMovementsContent"
+        );
+
+
+    const closeHeaderButton =
+        document.getElementById(
+            "closeMonthlyMovementsModalButton"
+        );
+
+
+    const closeButton =
+        document.getElementById(
+            "closeMonthlyMovementsButton"
+        );
+
+
+    const monthNames = [
+
+        "Enero",
+        "Febrero",
+        "Marzo",
+        "Abril",
+        "Mayo",
+        "Junio",
+        "Julio",
+        "Agosto",
+        "Septiembre",
+        "Octubre",
+        "Noviembre",
+        "Diciembre"
+
+    ];
+
+
+    function closeModal() {
+
+        modal.classList.add(
+            "hidden"
+        );
+
+    }
+
+
+    closeHeaderButton.addEventListener(
+        "click",
+        closeModal
+    );
+
+
+    closeButton.addEventListener(
+        "click",
+        closeModal
+    );
+
+
+    function formatCurrency(
+        amount
+    ) {
+
+        return new Intl.NumberFormat(
+            "es-MX",
+            {
+                style:
+                    "currency",
+
+                currency:
+                    "MXN"
+            }
+        ).format(
+            amount
+        );
+
+    }
+
+
+    function formatDate(
+        dateString
+    ) {
+
+        const [
+            year,
+            month,
+            day
+        ] =
+            dateString
+                .split("-")
+                .map(Number);
+
+
+        return new Intl.DateTimeFormat(
+            "es-MX",
+            {
+                day:
+                    "2-digit",
+
+                month:
+                    "short"
+            }
+        ).format(
+            new Date(
+                year,
+                month - 1,
+                day
+            )
+        );
+
+    }
+
+
+    /*
+        Construir una fila visual.
+    */
+
+    function createMovementRow({
+        movement,
+        date,
+        creditName = null,
+        scheduled = false
+    }) {
+
+        const row =
+            document.createElement(
+                "div"
+            );
+
+
+        row.classList.add(
+            "monthly-movement-row"
+        );
+
+
+        const dateElement =
+            document.createElement(
+                "span"
+            );
+
+
+        dateElement.classList.add(
+            "monthly-movement-date"
+        );
+
+
+        dateElement.textContent =
+            formatDate(
+                date
+            );
+
+
+        const info =
+            document.createElement(
+                "div"
+            );
+
+
+        info.classList.add(
+            "monthly-movement-info"
+        );
+
+
+        const description =
+            document.createElement(
+                "strong"
+            );
+
+
+        description.textContent =
+            movement.description;
+
+
+        info.appendChild(
+            description
+        );
+
+
+        /*
+            Información secundaria.
+        */
+
+        const details =
+            [];
+
+
+        if (
+            movement.paymentMethod ===
+                "credit"
+            &&
+            creditName
+        ) {
+
+            details.push(
+                creditName
+            );
+
+        }
+
+
+        if (
+            movement.purpose ===
+                "creditPayment"
+            &&
+            creditName
+        ) {
+
+            details.push(
+                `Pago a ${creditName}`
+            );
+
+        }
+
+
+        if (
+            scheduled &&
+            movement.recurrence
+        ) {
+
+            details.push(
+                "Periódico"
+            );
+
+        }
+
+
+        if (
+            details.length > 0
+        ) {
+
+            const detail =
+                document.createElement(
+                    "small"
+                );
+
+
+            detail.textContent =
+                details.join(
+                    " · "
+                );
+
+
+            info.appendChild(
+                detail
+            );
+
+        }
+
+
+        const amount =
+            document.createElement(
+                "strong"
+            );
+
+
+        amount.classList.add(
+            "monthly-movement-amount"
+        );
+
+
+        /*
+            Compra con TDC:
+            sigue siendo egreso,
+            aunque no afecte todavía
+            el saldo disponible.
+        */
+
+        if (
+            movement.type ===
+                "income"
+        ) {
+
+            amount.textContent =
+                formatCurrency(
+                    movement.amount
+                );
+
+
+            amount.classList.add(
+                "monthly-movement-income"
+            );
+
+        } else {
+
+            amount.textContent =
+                `-${formatCurrency(
+                    movement.amount
+                )}`;
+
+
+            amount.classList.add(
+                "monthly-movement-expense"
+            );
+
+        }
+
+
+        row.appendChild(
+            dateElement
+        );
+
+
+        row.appendChild(
+            info
+        );
+
+
+        row.appendChild(
+            amount
+        );
+
+
+        /*
+            Reutilizar los modales existentes.
+        */
+
+        if (scheduled) {
+
+            row.classList.add(
+                "monthly-movement-clickable"
+            );
+
+
+            row.addEventListener(
+                "click",
+                () => {
+
+                    closeModal();
+
+
+                    window.dispatchEvent(
+                        new CustomEvent(
+                            "openScheduledMovement",
+                            {
+                                detail: {
+
+                                    movementId:
+                                        movement.id,
+
+                                    occurrenceDate:
+                                        date
+
+                                }
+                            }
+                        )
+                    );
+
+                }
+            );
+
+        } else {
+
+            row.classList.add(
+                "monthly-movement-clickable"
+            );
+
+
+            row.addEventListener(
+                "click",
+                () => {
+
+                    closeModal();
+
+
+                    window.dispatchEvent(
+                        new CustomEvent(
+                            "openCompletedMovement",
+                            {
+                                detail: {
+
+                                    movementId:
+                                        movement.id
+
+                                }
+                            }
+                        )
+                    );
+
+                }
+            );
+
+        }
+
+
+        return row;
+
+    }
+
+
+    /*
+        Crear una sección:
+        REALIZADOS / PROGRAMADOS
+    */
+
+    function createSection(
+        sectionTitle
+    ) {
+
+        const section =
+            document.createElement(
+                "section"
+            );
+
+
+        section.classList.add(
+            "monthly-movements-section"
+        );
+
+
+        const heading =
+            document.createElement(
+                "h3"
+            );
+
+
+        heading.textContent =
+            sectionTitle;
+
+
+        section.appendChild(
+            heading
+        );
+
+
+        return section;
+
+    }
+
+
+    openButton.addEventListener(
+        "click",
+        async () => {
+
+            try {
+
+                const {
+                    year,
+                    month
+                } =
+                    getCurrentCalendarPeriod();
+
+
+                const movements =
+                    await getAllRecords(
+                        "movements"
+                    );
+
+
+                const credits =
+                    await getAllRecords(
+                        "credits"
+                    );
+
+
+                content.innerHTML =
+                    "";
+
+
+                title.textContent =
+                    `Movimientos · ` +
+                    `${monthNames[month]} ${year}`;
+
+
+                const monthPrefix =
+                    `${year}-${String(
+                        month + 1
+                    ).padStart(
+                        2,
+                        "0"
+                    )}-`;
+
+
+                /*
+                    =================================
+                    DETERMINAR PERIODO
+                    =================================
+                */
+
+                const today =
+                    new Date();
+
+
+                const currentPeriod =
+                    today.getFullYear() *
+                        12 +
+                    today.getMonth();
+
+
+                const visiblePeriod =
+                    year * 12 +
+                    month;
+
+
+                /*
+                    =================================
+                    REALIZADOS
+                    =================================
+                */
+
+                const completedMovements =
+                    movements
+                        .filter(
+                            movement =>
+
+                                movement.status ===
+                                    "completed"
+
+                                &&
+
+                                movement.completedDate
+                                    ?.startsWith(
+                                        monthPrefix
+                                    )
+                        )
+                        .sort(
+                            (a, b) =>
+
+                                a.completedDate
+                                    .localeCompare(
+                                        b.completedDate
+                                    )
+                        );
+
+
+                if (
+                    visiblePeriod <=
+                        currentPeriod
+                    &&
+                    completedMovements.length >
+                        0
+                ) {
+
+                    const section =
+                        createSection(
+                            "Realizados"
+                        );
+
+
+                    completedMovements.forEach(
+                        movement => {
+
+                            const credit =
+                                credits.find(
+                                    item =>
+                                        item.id ===
+                                        movement.creditId
+                                );
+
+
+                            section.appendChild(
+                                createMovementRow({
+
+                                    movement,
+
+                                    date:
+                                        movement.completedDate,
+
+                                    creditName:
+                                        credit?.name ||
+                                        null,
+
+                                    scheduled:
+                                        false
+
+                                })
+                            );
+
+                        }
+                    );
+
+
+                    content.appendChild(
+                        section
+                    );
+
+                }
+
+
+                /*
+                    =================================
+                    PROGRAMADOS
+                    =================================
+
+                    Recorremos cada día porque
+                    getScheduledMovementsForDate()
+                    ya conoce recurrencias,
+                    ocurrencias realizadas, etc.
+                */
+
+                if (
+                    visiblePeriod >=
+                    currentPeriod
+                ) {
+
+                    const daysInMonth =
+                        new Date(
+                            year,
+                            month + 1,
+                            0
+                        ).getDate();
+
+
+                    const occurrences =
+                        [];
+
+
+                    for (
+                        let day = 1;
+                        day <= daysInMonth;
+                        day++
+                    ) {
+
+                        const date =
+                            `${year}-` +
+                            `${String(
+                                month + 1
+                            ).padStart(
+                                2,
+                                "0"
+                            )}-` +
+                            `${String(
+                                day
+                            ).padStart(
+                                2,
+                                "0"
+                            )}`;
+
+
+                        const dayMovements =
+                            getScheduledMovementsForDate(
+                                date,
+                                movements
+                            );
+
+
+                        dayMovements.forEach(
+                            movement => {
+
+                                occurrences.push({
+
+                                    movement,
+
+                                    date
+
+                                });
+
+                            }
+                        );
+
+                    }
+
+
+                    if (
+                        occurrences.length >
+                        0
+                    ) {
+
+                        const section =
+                            createSection(
+                                "Programados"
+                            );
+
+
+                        occurrences.forEach(
+                            ({
+                                movement,
+                                date
+                            }) => {
+
+                                const credit =
+                                    credits.find(
+                                        item =>
+                                            item.id ===
+                                            movement.creditId
+                                    );
+
+
+                                section.appendChild(
+                                    createMovementRow({
+
+                                        movement,
+
+                                        date,
+
+                                        creditName:
+                                            credit?.name ||
+                                            null,
+
+                                        scheduled:
+                                            true
+
+                                    })
+                                );
+
+                            }
+                        );
+
+
+                        content.appendChild(
+                            section
+                        );
+
+                    }
+
+                }
+
+
+                /*
+                    Si el mes no tiene nada.
+                */
+
+                if (
+                    content.children.length ===
+                    0
+                ) {
+
+                    const empty =
+                        document.createElement(
+                            "p"
+                        );
+
+
+                    empty.classList.add(
+                        "monthly-movements-empty"
+                    );
+
+
+                    empty.textContent =
+                        "No hay movimientos para este mes.";
+
+
+                    content.appendChild(
+                        empty
+                    );
+
+                }
+
+
+                modal.classList.remove(
+                    "hidden"
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudieron cargar los movimientos del mes:",
+                    error
+                );
+
+
+                showNotification(
+                    "No se pudieron mostrar los movimientos del mes.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+}
+
+
 document.addEventListener(
     "DOMContentLoaded",
     async () => {
@@ -3931,6 +4719,8 @@ document.addEventListener(
             initializeCreditObligationModal();
 
             initializeCreditPurchasesDayModal();
+
+            initializeMonthlyMovementsModal();
 
 
             /*

@@ -3,7 +3,7 @@ import {
 } from "./creditCalculations.js";
 
 import {
-    calculateDailyBalance
+    calculateCalendarBalance
 } from "./calculations.js";
 
 import {
@@ -28,6 +28,27 @@ let currentYear =
 
 let currentMonth =
     new Date().getMonth();
+
+
+/*
+    Permite que otras partes de la app
+    sepan qué periodo está mostrando
+    actualmente el calendario.
+*/
+
+export function getCurrentCalendarPeriod() {
+
+    return {
+
+        year:
+            currentYear,
+
+        month:
+            currentMonth
+
+    };
+
+}
 
 
 /*
@@ -217,6 +238,36 @@ const creditObligations =
 
 
     /*
+        Mostrar el botón "Hoy"
+        únicamente cuando estamos
+        fuera del mes actual.
+    */
+
+    const todayButton =
+        document.getElementById(
+            "todayButton"
+        );
+
+
+    const today =
+        new Date();
+
+
+    const isCurrentMonth =
+        currentYear ===
+            today.getFullYear()
+        &&
+        currentMonth ===
+            today.getMonth();
+
+
+    todayButton.classList.toggle(
+        "hidden",
+        isCurrentMonth
+    );
+
+
+    /*
         Primer día del mes.
     */
 
@@ -394,9 +445,10 @@ const creditObligations =
         */
 
         const balance =
-            calculateDailyBalance(
+            calculateCalendarBalance(
                 date,
-                movements
+                movements,
+                credits
             );
 
 
@@ -596,7 +648,9 @@ const creditObligations =
         );
 
         accumulatedBalanceLabel.textContent =
-            "Acumulado:";
+            balance.projected
+                ? "Proyectado:"
+                : "Acumulado:";
 
 
         const accumulatedBalanceValue =
