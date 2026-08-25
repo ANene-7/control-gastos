@@ -1,4 +1,74 @@
 /* ================================
+   DESIGN TOKENS
+================================ */
+
+:root {
+
+    /*
+        Identidad principal.
+    */
+
+    --color-primary-950: #081426;
+    --color-primary-900: #0d1f38;
+    --color-primary-800: #153458;
+    --color-primary-700: #1e4d7b;
+    --color-primary-600: #28669f;
+
+    /*
+        Superficies.
+    */
+
+    --color-background: #eef3f8;
+    --color-surface: #ffffff;
+    --color-surface-soft: #f8fafc;
+    --color-surface-hover: #f1f5f9;
+
+    /*
+        Texto.
+    */
+
+    --color-text: #172033;
+    --color-text-secondary: #667085;
+    --color-text-muted: #98a2b3;
+
+    /*
+        Bordes.
+    */
+
+    --color-border: #e4e9f0;
+    --color-border-strong: #d5dce6;
+
+    /*
+        Estados.
+
+        Los dejamos definidos desde ahora
+        para utilizarlos posteriormente
+        en calendario y métricas.
+    */
+
+    --color-positive: #23885b;
+    --color-negative: #c84a54;
+    --color-warning: #c68724;
+    --color-credit: #6658b5;
+
+    /*
+        Dimensiones.
+    */
+
+    --radius-small: 8px;
+    --radius-medium: 12px;
+    --radius-large: 16px;
+
+    --shadow-small:
+        0 1px 2px rgba(16, 24, 40, 0.04);
+
+    --shadow-medium:
+        0 8px 24px rgba(16, 24, 40, 0.07);
+
+}
+
+
+/* ================================
    RESET
 ================================ */
 
@@ -9,10 +79,33 @@
 }
 
 
+html {
+    background:
+        var(--color-background);
+}
+
+
 body {
-    font-family: Arial, Helvetica, sans-serif;
-    background: #f5f6f8;
-    color: #222;
+
+    min-height: 100vh;
+
+    font-family:
+        ui-sans-serif,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+    background:
+        var(--color-background);
+
+    color:
+        var(--color-text);
+
+    -webkit-font-smoothing:
+        antialiased;
+
 }
 
 
@@ -21,26 +114,71 @@ body {
 ================================ */
 
 .app-header {
+
     display: flex;
-    justify-content: space-between;
-    align-items: center;
 
-    padding: 20px 32px;
+    justify-content:
+        space-between;
 
-    background: white;
-    border-bottom: 1px solid #ddd;
+    align-items:
+        center;
+
+    gap: 24px;
+
+    padding:
+        18px 32px;
+
+    background:
+        var(--color-primary-950);
+
+    color:
+        white;
+
+    border-bottom:
+        1px solid rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
+
+    box-shadow:
+        0 2px 10px rgba(
+            8,
+            20,
+            38,
+            0.12
+        );
+
 }
 
 
 .app-title h1 {
-    font-size: 24px;
+
+    font-size: 23px;
+
+    font-weight: 700;
+
+    letter-spacing:
+        -0.02em;
+
 }
 
 
 .app-title p {
-    margin-top: 4px;
-    color: #777;
-    font-size: 14px;
+
+    margin-top: 3px;
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.6
+        );
+
+    font-size: 13px;
+
 }
 
 
@@ -49,9 +187,17 @@ body {
 ================================ */
 
 .app-main {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 30px;
+
+    width: 100%;
+
+    max-width: 1500px;
+
+    margin:
+        0 auto;
+
+    padding:
+        28px 30px 40px;
+
 }
 
 
@@ -60,43 +206,186 @@ body {
 ================================ */
 
 button {
-    font-family: inherit;
-    cursor: pointer;
-    border: none;
+
+    font-family:
+        inherit;
+
+    cursor:
+        pointer;
+
+    border:
+        none;
+
+    transition:
+        background-color 0.15s ease,
+        border-color 0.15s ease,
+        transform 0.1s ease,
+        box-shadow 0.15s ease;
+
+}
+
+
+button:active {
+
+    transform:
+        translateY(1px);
+
 }
 
 
 .primary-button {
-    padding: 10px 16px;
 
-    background: #222;
-    color: white;
+    padding:
+        10px 16px;
 
-    border-radius: 8px;
+    background:
+        var(--color-primary-700);
 
-    font-size: 14px;
+    color:
+        white;
+
+    border-radius:
+        var(--radius-small);
+
+    font-size:
+        13px;
+
+    font-weight:
+        600;
+
+    box-shadow:
+        var(--shadow-small);
+
 }
 
 
 .primary-button:hover {
-    background: #444;
+
+    background:
+        var(--color-primary-600);
+
 }
 
 
 .secondary-button {
-    padding: 8px 12px;
 
-    background: #eee;
-    color: #222;
+    padding:
+        9px 13px;
 
-    border-radius: 6px;
+    background:
+        var(--color-surface-soft);
 
-    font-size: 13px;
+    color:
+        var(--color-text);
+
+    border:
+        1px solid
+        var(--color-border);
+
+    border-radius:
+        var(--radius-small);
+
+    font-size:
+        13px;
+
+    font-weight:
+        500;
+
 }
 
 
 .secondary-button:hover {
-    background: #ddd;
+
+    background:
+        var(--color-surface-hover);
+
+    border-color:
+        var(--color-border-strong);
+
+}
+
+
+/*
+    Botones del header.
+
+    Mantienen el mismo componente,
+    pero adaptado a la superficie oscura.
+*/
+
+.app-header .secondary-button {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.08
+        );
+
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.88
+        );
+
+    border-color:
+        rgba(
+            255,
+            255,
+            255,
+            0.12
+        );
+
+}
+
+
+.app-header .secondary-button:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.14
+        );
+
+}
+
+
+.app-header .primary-button {
+
+    background:
+        white;
+
+    color:
+        var(--color-primary-950);
+
+}
+
+
+.app-header .primary-button:hover {
+
+    background:
+        #eef4fb;
+
+}
+
+
+/* ================================
+   HEADER ACTIONS
+================================ */
+
+.header-actions {
+
+    display: flex;
+
+    align-items:
+        center;
+
+    gap: 9px;
+
 }
 
 
@@ -105,40 +394,349 @@ button {
 ================================ */
 
 .summary-section {
+
     display: grid;
 
     grid-template-columns:
-        repeat(4, minmax(0, 1fr));
+        repeat(
+            5,
+            minmax(0, 1fr)
+        );
 
-    gap: 16px;
+    gap: 14px;
 
-    margin-bottom: 30px;
+    margin-bottom: 24px;
+
 }
 
 
 .summary-card {
-    background: white;
 
-    border: 1px solid #ddd;
-    border-radius: 10px;
+    position: relative;
 
-    padding: 20px;
+    min-width: 0;
+    min-height: 132px;
+
+    display: flex;
+
+    justify-content: space-between;
+    align-items: flex-start;
+
+    gap: 14px;
+
+    padding: 22px;
+
+    background:
+        var(--color-surface);
+
+    border:
+        1px solid
+        rgba(30, 77, 123, 0.10);
+
+    border-radius:
+        15px;
+
+    box-shadow:
+        0 5px 18px
+        rgba(13, 31, 56, 0.07);
+
+    overflow: hidden;
+
+}
+
+
+.summary-card::before {
+
+    content: "";
+
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+
+    height: 4px;
+
+    background:
+        var(--color-primary-700);
+
+}
+
+
+.summary-card-content {
+
+    min-width: 0;
+
 }
 
 
 .summary-label {
+
     display: block;
 
-    color: #777;
+    margin-bottom: 10px;
 
-    font-size: 13px;
+    color:
+        var(--color-primary-700);
 
-    margin-bottom: 8px;
+    font-size: 12px;
+
+    font-weight: 600;
+
+    text-transform: none;
+
+    letter-spacing: 0;
+
 }
 
 
 .summary-card strong {
-    font-size: 24px;
+
+    display: block;
+
+    color:
+        var(--color-primary-950);
+
+    font-size:
+        clamp(
+            20px,
+            1.5vw,
+            28px
+        );
+
+    font-weight: 750;
+
+    letter-spacing:
+        -0.035em;
+
+}
+
+
+.summary-card-icon {
+
+    width: 42px;
+    height: 42px;
+
+    display: flex;
+
+    justify-content: center;
+    align-items: center;
+
+    flex-shrink: 0;
+
+    background:
+        #edf3fb;
+
+    color:
+        var(--color-primary-700);
+
+    border-radius:
+        10px;
+
+    font-size: 21px;
+
+    font-weight: 700;
+
+}
+
+
+/* Saldo mínimo */
+
+.minimum-balance-card::before {
+
+    background:
+        var(--color-credit);
+
+}
+
+
+.minimum-balance-card
+.summary-label,
+
+.minimum-balance-card
+strong {
+
+    color:
+        #5741b2;
+
+}
+
+
+.minimum-balance-card
+.summary-card-icon {
+
+    background:
+        #f0edfb;
+
+    color:
+        #6658b5;
+
+}
+
+
+.minimum-balance-card small {
+
+    display: block;
+
+    margin-top: 6px;
+
+    color:
+        var(--color-text-secondary);
+
+    font-size: 11px;
+
+}
+
+
+/* Ingresos */
+
+.summary-income::before {
+
+    background:
+        var(--color-positive);
+
+}
+
+
+.summary-income
+.summary-label,
+
+.summary-income
+strong {
+
+    color:
+        var(--color-positive);
+
+}
+
+
+.summary-income
+.summary-card-icon {
+
+    color:
+        var(--color-positive);
+
+    background:
+        rgba(
+            35,
+            136,
+            91,
+            0.10
+        );
+
+}
+
+
+/* Egresos */
+
+.summary-expenses::before {
+
+    background:
+        var(--color-negative);
+
+}
+
+
+.summary-expenses
+.summary-label,
+
+.summary-expenses
+strong {
+
+    color:
+        var(--color-negative);
+
+}
+
+
+.summary-expenses
+.summary-card-icon {
+
+    color:
+        var(--color-negative);
+
+    background:
+        rgba(
+            200,
+            74,
+            84,
+            0.10
+        );
+
+}
+
+
+/* Balance */
+
+.summary-balance::before {
+
+    background:
+        var(--color-primary-700);
+
+}
+
+
+.summary-balance
+.summary-label,
+
+.summary-balance
+strong {
+
+    color:
+        var(--color-primary-700);
+
+}
+
+
+/* ================================
+   SUMMARY MULTI ROW VALUES
+================================ */
+
+.summary-value-row {
+
+    display: flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        baseline;
+
+    gap:
+        10px;
+
+    width:
+        100%;
+
+    font-size:
+        15px;
+
+    font-weight:
+        650;
+
+}
+
+
+.summary-value-row +
+.summary-value-row {
+
+    margin-top:
+        5px;
+
+}
+
+
+.summary-value-row-label {
+
+    color:
+        var(--color-text-secondary);
+
+    font-size:
+        10px;
+
+    font-weight:
+        500;
+
 }
 
 
@@ -147,125 +745,724 @@ button {
 ================================ */
 
 .calendar-section {
-    background: white;
 
-    border: 1px solid #ddd;
-    border-radius: 10px;
+    background:
+        var(--color-surface);
 
-    overflow: hidden;
+    border:
+        1px solid
+        rgba(30, 77, 123, 0.22);
+
+    border-radius:
+        var(--radius-large);
+
+    overflow:
+        hidden;
+
+    box-shadow:
+        0 8px 28px
+        rgba(13, 31, 56, 0.08);
+
 }
 
 
-.calendar-header {
+/* ================================
+   CALENDAR HEADER
+================================ */
+
+.calendar-header.calendar-header {
+
     display: flex;
 
-    justify-content: space-between;
-    align-items: center;
+    justify-content:
+        space-between;
 
-    padding: 18px 20px;
+    align-items:
+        center;
 
-    border-bottom: 1px solid #ddd;
+    gap:
+        20px;
+
+    padding:
+        22px 28px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--color-primary-950),
+            var(--color-primary-900)
+        );
+
+    color:
+        white;
+
+    border-bottom:
+        none;
+
 }
 
 
 .calendar-title-container {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        12px;
+
 }
 
 
 .calendar-title-container h2 {
-    font-size: 20px;
+
+    color:
+        white;
+
+    font-size:
+        24px;
+
+    font-weight:
+        750;
+
+    letter-spacing:
+        -0.025em;
+
+}
+
+
+.calendar-title-container
+.secondary-button {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.12
+        );
+
+    color:
+        white;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            0.14
+        );
+
+}
+
+
+.calendar-title-container
+.secondary-button:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.20
+        );
+
 }
 
 
 .calendar-navigation-button {
-    width: 40px;
-    height: 40px;
 
-    border-radius: 50%;
+    display: flex;
 
-    background: #f0f0f0;
+    align-items: center;
 
-    font-size: 24px;
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+
+    padding: 0;
+
+    background:
+        transparent;
+
+    color:
+        white;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            0.32
+        );
+
+    border-radius:
+        50%;
+
+    font-size: 22px;
+
 }
 
 
 .calendar-navigation-button:hover {
-    background: #ddd;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.12
+        );
+
+    border-color:
+        rgba(
+            255,
+            255,
+            255,
+            0.5
+        );
+
 }
 
 
+.calendar-navigation-button span {
+
+    display:
+        block;
+
+    font-size:
+        24px;
+
+    line-height:
+        1;
+
+    transform:
+        translateY(-2px);
+
+}
+
+
+/* ================================
+   CALENDAR GRID
+================================ */
+
 .calendar-weekdays,
 .calendar-days {
-    display: grid;
+
+    display:
+        grid;
 
     grid-template-columns:
-        repeat(7, minmax(0, 1fr));
+        repeat(
+            7,
+            minmax(
+                0,
+                1fr
+            )
+        );
+
+}
+
+
+.calendar-weekdays {
+
+    background:
+        linear-gradient(
+            90deg,
+            #5f7fa9,
+            #708db6
+        );
+
 }
 
 
 .calendar-weekdays > div {
-    padding: 12px;
 
-    text-align: center;
+    padding:
+        11px 8px;
 
-    font-size: 12px;
-    font-weight: bold;
+    text-align:
+        center;
 
-    color: #777;
+    color:
+        rgba(
+            255,
+            255,
+            255,
+            0.93
+        );
 
-    border-bottom: 1px solid #ddd;
+    font-size:
+        10px;
+
+    font-weight:
+        750;
+
+    letter-spacing:
+        0.07em;
+
+    text-transform:
+        uppercase;
+
+    border-bottom:
+        none;
+
 }
 
 
 .calendar-days {
-    min-height: 600px;
+
+    min-height:
+        650px;
+
 }
 
 
+/* ================================
+   DAY CELL
+================================ */
+
 .calendar-day {
-    min-height: 110px;
 
-    padding: 10px;
+    position:
+        relative;
 
-    border-right: 1px solid #eee;
-    border-bottom: 1px solid #eee;
+    min-width:
+        0;
 
-    background: white;
+    min-height:
+        140px;
+
+    padding:
+        11px 12px;
+
+    background:
+        var(--color-surface);
+
+    border-right:
+        1px solid
+        rgba(
+            30,
+            77,
+            123,
+            0.08
+        );
+
+    border-bottom:
+        1px solid
+        rgba(
+            30,
+            77,
+            123,
+            0.08
+        );
+
+    cursor:
+        pointer;
+
+    transition:
+        background-color 0.15s ease,
+        box-shadow 0.15s ease;
+
+}
+
+
+.calendar-day:hover {
+
+    background:
+        #f9fbfd;
+
+    box-shadow:
+        inset 0 0 0 1px
+        rgba(
+            30,
+            77,
+            123,
+            0.08
+        );
+
 }
 
 
 .calendar-day:nth-child(7n) {
-    border-right: none;
+
+    border-right:
+        none;
+
+}
+
+
+/*
+    Sábados y domingos ligeramente
+    diferenciados sin dramatismo.
+*/
+
+.calendar-day:nth-child(7n + 6),
+.calendar-day:nth-child(7n) {
+
+    background:
+        #fbfcfe;
+
+}
+
+
+.calendar-day:nth-child(7n + 6):hover,
+.calendar-day:nth-child(7n):hover {
+
+    background:
+        #f7f9fc;
+
 }
 
 
 .calendar-day.empty {
-    background: #fafafa;
+
+    background:
+        #f7f9fc;
+
+    cursor:
+        default;
+
 }
 
+
+.calendar-day.empty:hover {
+
+    box-shadow:
+        none;
+
+}
+
+
+/* ================================
+   DAY NUMBER
+================================ */
 
 .calendar-day-number {
-    font-size: 13px;
-    font-weight: bold;
 
-    margin-bottom: 8px;
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width:
+        32px;
+
+    height:
+        32px;
+
+    margin-bottom:
+        9px;
+
+    color:
+        var(--color-primary-950);
+
+    font-size:
+        18px;
+
+    font-weight:
+        750;
+
+    border-radius:
+        50%;
+
 }
 
 
-.day-balance {
-    font-size: 13px;
-    font-weight: bold;
+.calendar-day-today
+.calendar-day-number {
+
+    background:
+        var(--color-primary-800);
+
+    color:
+        white;
+
+    box-shadow:
+        0 3px 10px
+        rgba(
+            21,
+            52,
+            88,
+            0.22
+        );
+
 }
 
 
-.day-cumulative {
-    margin-top: 4px;
+.balance-positive {
 
-    font-size: 11px;
-    color: #777;
+    color:
+        var(--color-positive);
+
+}
+
+
+.balance-negative {
+
+    color:
+        var(--color-negative);
+
+}
+
+
+/* ================================
+   BALANCES
+================================ */
+
+.calendar-balances {
+
+    margin-top:
+        2px;
+
+}
+
+
+.calendar-section-label {
+
+    margin-bottom:
+        3px;
+
+    color:
+        var(--color-text-muted);
+
+    font-size:
+        9px;
+
+    font-weight:
+        500;
+
+}
+
+
+.calendar-balance-row {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        baseline;
+
+    gap:
+        6px;
+
+    min-width:
+        0;
+
+}
+
+
+.calendar-balance-label {
+
+    flex-shrink:
+        0;
+
+    color:
+        var(--color-text-secondary);
+
+    font-size:
+        10px;
+
+    font-weight:
+        500;
+
+}
+
+
+.calendar-balance-value {
+
+    min-width:
+        0;
+
+    overflow:
+        hidden;
+
+    color:
+        var(--color-text);
+
+    font-size:
+        11px;
+
+    font-weight:
+        700;
+
+    text-overflow:
+        ellipsis;
+
+    white-space:
+        nowrap;
+
+}
+
+
+/* ================================
+   PROGRAMMED EVENTS
+================================ */
+
+.calendar-programmed-events {
+
+    margin-top:
+        9px;
+
+}
+
+
+.calendar-programmed-section {
+
+    margin-top:
+        5px;
+
+}
+
+
+.calendar-programmed-list {
+
+    display:
+        flex;
+
+    flex-direction:
+        row;
+
+    flex-wrap:
+        wrap;
+
+    align-items:
+        center;
+
+    gap:
+        5px;
+
+}
+
+
+.calendar-programmed-section:empty {
+
+    display:
+        none;
+
+}
+
+
+/* ================================
+   MOVEMENT DOTS
+================================ */
+
+.movement-color-dot {
+
+    display:
+        block;
+
+    width:
+        7px;
+
+    height:
+        7px;
+
+    border-radius:
+        50%;
+
+    flex-shrink:
+        0;
+
+}
+
+
+/* ================================
+   CREDIT
+================================ */
+
+.calendar-credit-summary {
+
+    display:
+        flex;
+
+    justify-content:
+        space-between;
+
+    align-items:
+        baseline;
+
+    gap:
+        7px;
+
+    margin-top:
+        7px;
+
+    padding-top:
+        6px;
+
+    color:
+        var(--color-credit);
+
+    border-top:
+        1px dashed
+        var(--color-border);
+
+    cursor:
+        pointer;
+
+}
+
+
+.calendar-credit-summary:hover {
+
+    opacity:
+        0.75;
+
+}
+
+
+.credit-obligation-calendar-item {
+
+    flex-basis:
+        100%;
+
+    margin-top:
+        4px;
+
+    padding:
+        4px 6px;
+
+    background:
+        rgba(
+            102,
+            88,
+            181,
+            0.07
+        );
+
+    color:
+        var(--color-credit);
+
+    border-radius:
+        6px;
+
+    font-size:
+        10px;
+
+    font-weight:
+        600;
+
+}
+
+
+.calendar-programmed-item {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
 }
 
 
@@ -295,39 +1492,122 @@ button {
 
 
 .modal-content {
-    width: min(500px, calc(100% - 30px));
 
-    max-height: 90vh;
+    width:
+        min(
+            500px,
+            calc(100% - 30px)
+        );
 
-    overflow-y: auto;
+    max-height:
+        90vh;
 
-    background: white;
+    overflow-y:
+        auto;
 
-    border-radius: 12px;
+    background:
+        var(--color-surface);
 
-    padding: 24px;
+    border:
+        1px solid
+        rgba(30, 77, 123, 0.16);
+
+    border-radius:
+        var(--radius-large);
+
+    padding:
+        0 24px 24px;
+
+    box-shadow:
+        0 24px 60px
+        rgba(8, 20, 38, 0.18);
+
 }
 
 
 .modal-header {
-    display: flex;
 
-    justify-content: space-between;
-    align-items: center;
+    display:
+        flex;
 
-    margin-bottom: 24px;
+    justify-content:
+        space-between;
+
+    align-items:
+        center;
+
+    margin:
+        0 -24px 24px;
+
+    padding:
+        18px 24px;
+
+    background:
+        linear-gradient(
+            135deg,
+            var(--color-primary-950),
+            var(--color-primary-800)
+        );
+
+    color:
+        white;
+
+    border-radius:
+        var(--radius-large)
+        var(--radius-large)
+        0
+        0;
+
 }
 
 
 .close-button {
-    width: 32px;
-    height: 32px;
 
-    border-radius: 50%;
+    display:
+        flex;
 
-    background: #eee;
+    align-items:
+        center;
 
-    font-size: 22px;
+    justify-content:
+        center;
+
+    width:
+        32px;
+
+    height:
+        32px;
+
+    padding:
+        0;
+
+    background:
+        rgba(255, 255, 255, 0.12);
+
+    color:
+        white;
+
+    border:
+        1px solid
+        rgba(255, 255, 255, 0.14);
+
+    border-radius:
+        50%;
+
+    font-size:
+        20px;
+
+    line-height:
+        1;
+
+}
+
+
+.close-button:hover {
+
+    background:
+        rgba(255, 255, 255, 0.2);
+
 }
 
 
@@ -431,61 +1711,6 @@ textarea {
     font-size: 11px;
 
     line-height: 1.4;
-}
-
-.header-actions {
-    display: flex;
-
-    align-items: center;
-
-    gap: 10px;
-}
-
-.calendar-balances {
-    margin-top: 8px;
-}
-
-.calendar-section-label {
-    font-size: 10px;
-    font-weight: 400;
-    opacity: 0.65;
-    margin-bottom: 3px;
-}
-
-.calendar-balance-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 6px;
-}
-
-.calendar-balance-label {
-    font-size: 10px;
-    font-weight: 300;
-    opacity: 0.65;
-}
-
-.calendar-balance-value {
-    font-size: 12px;
-    font-weight: 600;
-}
-
-.calendar-programmed-events {
-    margin-top: 8px;
-}
-
-.calendar-programmed-section {
-    margin-top: 5px;
-}
-
-.calendar-programmed-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.calendar-programmed-section:empty {
-    display: none;
 }
 
 .color-options {
@@ -745,56 +1970,6 @@ textarea {
 }
 
 
-.summary-value-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    gap: 14px;
-
-    width: 100%;
-}
-
-
-.summary-value-row + .summary-value-row {
-    margin-top: 5px;
-}
-
-
-.summary-value-row-label {
-    font-size: 0.75rem;
-    font-weight: 400;
-    opacity: 0.7;
-}
-
-
-.calendar-programmed-item {
-    display: flex;
-    align-items: center;
-}
-
-
-.calendar-programmed-list {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-
-    gap: 5px;
-}
-
-
-.movement-color-dot {
-    display: inline-block;
-
-    width: 8px;
-    height: 8px;
-
-    border-radius: 50%;
-
-    flex-shrink: 0;
-}
-
-
 .movement-color-blue {
     background: #3b82f6;
 }
@@ -825,19 +2000,53 @@ textarea {
 }
 
 
-.credit-obligation-calendar-item {
-    flex-basis: 100%;
+.calendar-balance-value.balance-negative {
+    color:
+        var(--color-negative);
 }
 
-.calendar-credit-summary {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+/* ================================
+   TABLET
+================================ */
 
-    gap: 8px;
+@media (max-width: 1150px) {
 
-    cursor: pointer;
+    .summary-section {
+
+        grid-template-columns:
+            repeat(
+                6,
+                minmax(0, 1fr)
+            );
+
+    }
+
+
+    .summary-card {
+
+        grid-column:
+            span 2;
+
+    }
+
+
+    .summary-card:nth-child(4) {
+
+        grid-column:
+            2 / span 2;
+
+    }
+
+
+    .summary-card:nth-child(5) {
+
+        grid-column:
+            span 2;
+
+    }
+
 }
+
 
 /* ================================
    MOBILE
@@ -845,66 +2054,815 @@ textarea {
 
 @media (max-width: 800px) {
 
-    .summary-section {
-        grid-template-columns:
-            repeat(2, minmax(0, 1fr));
+    body {
+
+        background:
+            #eef3f8;
+
     }
 
+
+    /* ============================
+       HEADER
+    ============================ */
 
     .app-header {
-        padding: 16px;
+
+        flex-direction:
+            column;
+
+        align-items:
+            stretch;
+
+        gap:
+            14px;
+
+        padding:
+            15px 16px;
+
     }
 
 
+    .app-title {
+
+        text-align:
+            left;
+
+    }
+
+
+    .app-title h1 {
+
+        font-size:
+            20px;
+
+    }
+
+
+    .app-title p {
+
+        font-size:
+            12px;
+
+    }
+
+
+    .header-actions {
+
+        display:
+            grid;
+
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
+
+        gap:
+            8px;
+
+        width:
+            100%;
+
+    }
+
+
+    .header-button {
+
+        min-width:
+            0;
+
+        display:
+            flex;
+
+        justify-content:
+            center;
+
+        align-items:
+            center;
+
+        gap:
+            5px;
+
+        padding:
+            9px 6px;
+
+        font-size:
+            11px;
+
+    }
+
+
+    .header-button-icon {
+
+        font-size:
+            15px;
+
+    }
+
+
+    /* ============================
+       MAIN
+    ============================ */
+
     .app-main {
-        padding: 16px;
+
+        max-width:
+            none;
+
+        padding:
+            14px 10px 24px;
+
+    }
+
+
+    /* ============================
+       SUMMARY
+    ============================ */
+
+    .summary-section {
+
+        grid-template-columns:
+            repeat(
+                2,
+                minmax(0, 1fr)
+            );
+
+        gap:
+            8px;
+
+        margin-bottom:
+            14px;
+
+    }
+
+
+    .summary-card,
+    .summary-card:nth-child(4),
+    .summary-card:nth-child(5) {
+
+        grid-column:
+            auto;
+
+        min-height:
+            92px;
+
+        padding:
+            14px;
+
+        border-radius:
+            12px;
+
+    }
+
+
+    /*
+        Balance ocupa todo el ancho
+        para que la quinta tarjeta
+        no quede sola de forma rara.
+    */
+
+    .summary-card:nth-child(5) {
+
+        grid-column:
+            1 / -1;
+
+    }
+
+
+    .summary-label {
+
+        margin-bottom:
+            6px;
+
+        font-size:
+            9px;
+
+    }
+
+
+    .summary-card strong {
+
+        font-size:
+            19px;
+
+    }
+
+
+    .summary-card-icon {
+
+        width:
+            34px;
+
+        height:
+            34px;
+
+        border-radius:
+            8px;
+
+        font-size:
+            17px;
+
+    }
+
+
+    .summary-value-row {
+
+        gap:
+            6px;
+
+        font-size:
+            12px;
+
+    }
+
+
+    .summary-value-row-label {
+
+        font-size:
+            8px;
+
+    }
+
+
+    .minimum-balance-card small {
+
+        font-size:
+            9px;
+
+    }
+
+
+    /* ============================
+       CALENDAR CONTAINER
+    ============================ */
+
+    .calendar-section {
+
+        width:
+            100%;
+
+        border-radius:
+            14px;
+
+    }
+
+
+    .calendar-header {
+
+        padding:
+            13px 14px;
+
+        gap:
+            8px;
+
+    }
+
+
+    .calendar-title-container {
+
+        gap:
+            7px;
+
+    }
+
+
+    .calendar-title-container h2 {
+
+        font-size:
+            17px;
+
+    }
+
+
+    .calendar-title-container
+    .secondary-button {
+
+        padding:
+            6px 8px;
+
+        font-size:
+            10px;
+
+    }
+
+
+    .calendar-navigation-button {
+
+        width:
+            32px;
+
+        height:
+            32px;
+
+        flex-shrink:
+            0;
+
+    }
+
+
+    .calendar-navigation-button span {
+
+        font-size:
+            20px;
+
+        transform:
+            translateY(-1px);
+
+    }
+
+
+    /* ============================
+       WEEKDAYS
+    ============================ */
+
+    .calendar-weekdays > div {
+
+        padding:
+            8px 1px;
+
+        font-size:
+            8px;
+
+        letter-spacing:
+            0.04em;
+
+    }
+
+
+    /* ============================
+       CALENDAR DAYS
+    ============================ */
+
+    .calendar-days {
+
+        min-height:
+            0;
+
     }
 
 
     .calendar-day {
-        min-height: 90px;
-        padding: 6px;
+
+        position:
+            relative;
+
+        min-width:
+            0;
+
+        min-height:
+            82px;
+
+        padding:
+            7px 5px;
+
+        overflow:
+            hidden;
+
+        border-right:
+            1px solid
+            rgba(30, 77, 123, 0.06);
+
+        border-bottom:
+            1px solid
+            rgba(30, 77, 123, 0.06);
+
     }
 
 
-    .calendar-weekdays > div {
-        font-size: 10px;
-        padding: 8px 2px;
+    /*
+        En móvil el número del día
+        pasa a ser parte visual de fondo.
+    */
+
+    .calendar-day-number {
+
+        position:
+            absolute;
+
+        top:
+            4px;
+
+        right:
+            5px;
+
+        width:
+            auto;
+
+        height:
+            auto;
+
+        margin:
+            0;
+
+        color:
+            var(--color-primary-900);
+
+        font-size:
+            22px;
+
+        font-weight:
+            800;
+
+        line-height:
+            1;
+
+        opacity:
+            0.42;
+
+        pointer-events:
+            none;
+
+    }
+
+
+    /*
+        El día actual debe seguir
+        distinguiéndose claramente.
+    */
+
+    .calendar-day-today
+    .calendar-day-number {
+
+        position:
+            absolute;
+
+        top:
+            4px;
+
+        right:
+            4px;
+
+        width:
+            25px;
+
+        height:
+            25px;
+
+        display:
+            flex;
+
+        justify-content:
+            center;
+
+        align-items:
+            center;
+
+        background:
+            var(--color-primary-800);
+
+        color:
+            white;
+
+        font-size:
+            12px;
+
+        opacity:
+            1;
+
+        border-radius:
+            50%;
+
+        box-shadow:
+            none;
+
+    }
+
+
+    /*
+        Eliminamos textos secundarios.
+
+        En móvil queremos:
+        - saldo acumulado
+        - puntos
+        - crédito si existe
+    */
+
+    .calendar-section-label {
+
+        display:
+            none;
+
+    }
+
+
+    /*
+        En móvil ocultamos el saldo acumulado.
+
+        Si existe un movimiento real ese día,
+        mostramos únicamente el saldo neto
+        del día.
+    */
+
+    .calendar-balance-row:last-child {
+        display: none;
+    }
+
+
+    .calendar-balances {
+        margin-top: 28px;
+        min-height: 11px;
+    }
+
+
+    /*
+        Quitamos "Acumulado:" y dejamos
+        sólo la cifra.
+    */
+
+    .calendar-balance-label {
+
+        display:
+            none;
+
+    }
+
+
+    .calendar-balance-row {
+
+        display:
+            block;
+
+    }
+
+
+    .calendar-balance-value {
+
+        display:
+            block;
+
+        width:
+            100%;
+
+        overflow:
+            hidden;
+
+        color:
+            var(--color-primary-950);
+
+        font-size:
+            10px;
+
+        font-weight:
+            750;
+
+        line-height:
+            1.2;
+
+        text-align:
+            left;
+
+        text-overflow:
+            ellipsis;
+
+        white-space:
+            nowrap;
+
+    }
+
+
+    /* ============================
+       PROGRAMMED MOVEMENTS
+    ============================ */
+
+    .calendar-programmed-events {
+
+        margin-top:
+            6px;
+
+    }
+
+
+    .calendar-programmed-section {
+
+        margin-top:
+            3px;
+
+    }
+
+
+    .calendar-programmed-list {
+
+        gap:
+            4px;
+
+    }
+
+
+    .movement-color-dot {
+
+        width:
+            6px;
+
+        height:
+            6px;
+
+    }
+
+
+    /*
+        FLP de crédito más compacta.
+    */
+
+    .credit-obligation-calendar-item {
+
+        flex-basis: 100%;
+
+        margin-top: 4px;
+
+        padding: 3px 4px;
+
+        overflow: hidden;
+
+        background:
+            rgba(
+                102,
+                88,
+                181,
+                0.09
+            );
+
+        color:
+            var(--color-credit);
+
+        border-radius: 4px;
+
+        font-size: 7px;
+
+        font-weight: 650;
+
+        text-overflow: ellipsis;
+
+        white-space: nowrap;
+
+    }
+
+
+    /*
+        Compras con crédito realizadas.
+
+        Mostramos sólo la cifra de forma
+        compacta para no saturar.
+    */
+
+    .calendar-credit-summary {
+
+        display: flex;
+
+        flex-direction: column;
+
+        align-items: flex-start;
+
+        gap: 1px;
+
+        margin-top: 5px;
+
+        padding-top: 0;
+
+        overflow: hidden;
+
+        border-top: none;
+
+        color: var(--color-credit);
+
+        white-space: nowrap;
+
+    }
+
+
+    .calendar-credit-summary
+    .calendar-balance-label {
+
+        display: block;
+
+        color: var(--color-credit);
+
+        font-size: 7px;
+
+        font-weight: 500;
+
+    }
+
+
+    .calendar-credit-summary
+    .calendar-balance-value {
+
+        display: block;
+
+        color: var(--color-credit);
+
+        font-size: 9px;
+
+        font-weight: 700;
+
     }
 
 }
 
 
-@media (max-width: 500px) {
+/* ================================
+   SMALL MOBILE
+================================ */
 
-    .summary-section {
-        grid-template-columns:
-            1fr;
+@media (max-width: 430px) {
+
+    .app-main {
+
+        padding-left:
+            6px;
+
+        padding-right:
+            6px;
+
     }
 
 
-    .app-title h1 {
-        font-size: 18px;
+    .summary-card {
+
+        padding:
+            12px;
+
     }
 
 
-    .app-title p {
-        display: none;
+    .summary-card-icon {
+
+        display:
+            none;
+
     }
 
 
-    .calendar-days {
-        min-height: 450px;
+    .summary-card strong {
+
+        font-size:
+            17px;
+
+    }
+
+
+    .calendar-header {
+
+        padding:
+            11px 8px;
+
+    }
+
+
+    .calendar-title-container h2 {
+
+        font-size:
+            15px;
+
+    }
+
+
+    .calendar-navigation-button {
+
+        width:
+            29px;
+
+        height:
+            29px;
+
     }
 
 
     .calendar-day {
-        min-height: 70px;
+
+        min-height:
+            76px;
+
+        padding:
+            6px 3px;
+
     }
 
 
-    .day-cumulative {
-        font-size: 9px;
+    .calendar-day-number {
+
+        font-size:
+            18px;
+
+    }
+
+
+    .calendar-balance-value {
+
+        font-size:
+            8px;
+
+    }
+
+
+    .movement-color-dot {
+
+        width:
+            5px;
+
+        height:
+            5px;
+
     }
 
 }

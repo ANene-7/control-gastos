@@ -337,6 +337,35 @@ const creditObligations =
         const date =
             `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
+        /*
+            Marcar el día actual.
+        */
+
+        const today =
+            new Date();
+
+
+        const todayString =
+            `${today.getFullYear()}-` +
+            `${String(
+                today.getMonth() + 1
+            ).padStart(2, "0")}-` +
+            `${String(
+                today.getDate()
+            ).padStart(2, "0")}`;
+
+
+        if (
+            date ===
+            todayString
+        ) {
+
+            cell.classList.add(
+                "calendar-day-today"
+            );
+
+        }
+
         const scheduledMovements =
             getScheduledMovementsForDate(
                 date,
@@ -502,6 +531,30 @@ const creditObligations =
                 );
 
 
+            if (
+                balance.dailyBalance >
+                0
+            ) {
+
+                dailyBalanceValue.classList.add(
+                    "balance-positive"
+                );
+
+            }
+
+
+            if (
+                balance.dailyBalance <
+                0
+            ) {
+
+                dailyBalanceValue.classList.add(
+                    "balance-negative"
+                );
+
+            }
+
+
             dailyBalanceRow.appendChild(
                 dailyBalanceLabel
             );
@@ -569,6 +622,17 @@ const creditObligations =
                 formatCurrency(
                     balance.accumulatedBalance
                 );
+
+                if (
+                    balance.accumulatedBalance <
+                    0
+                ) {
+
+                    accumulatedBalanceValue.classList.add(
+                        "balance-negative"
+                    );
+
+                }
 
         }
 

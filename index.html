@@ -29,20 +29,46 @@
 
             <button
                 id="settingsButton"
-                class="secondary-button">
-                Configuración
+                class="secondary-button header-button">
+
+                <span class="header-button-icon">
+                    ⚙
+                </span>
+
+                <span>
+                    Configuración
+                </span>
+
             </button>
 
-            <button
-                id="addMovementButton"
-                class="primary-button">
-                + Movimiento
-            </button>
 
             <button
                 id="creditsButton"
-                class="secondary-button">
-                Créditos
+                class="secondary-button header-button">
+
+                <span class="header-button-icon">
+                    ◇
+                </span>
+
+                <span>
+                    Créditos
+                </span>
+
+            </button>
+
+
+            <button
+                id="addMovementButton"
+                class="primary-button header-button">
+
+                <span class="header-button-icon">
+                    +
+                </span>
+
+                <span>
+                    Movimiento
+                </span>
+
             </button>
 
         </div>
@@ -55,38 +81,115 @@
         <!-- Resumen -->
         <section class="summary-section">
 
-            <div class="summary-card">
-                <span class="summary-label">Saldo actual</span>
-                <strong id="currentBalance">$0.00</strong>
+            <!-- Saldo actual -->
+            <div class="summary-card summary-current">
+
+                <div class="summary-card-content">
+
+                    <span class="summary-label">
+                        Saldo actual
+                    </span>
+
+                    <strong id="currentBalance">
+                        $0.00
+                    </strong>
+
+                </div>
+
+                <div class="summary-card-icon">
+                    $
+                </div>
+
             </div>
 
-            <div class="summary-card">
-                <span class="summary-label">Ingresos del mes</span>
-                <strong id="monthlyIncome">$0.00</strong>
-            </div>
 
-            <div class="summary-card">
-                <span class="summary-label">Egresos del mes</span>
-                <strong id="monthlyExpenses">$0.00</strong>
-            </div>
-
-            <div class="summary-card">
-                <span class="summary-label">Balance del mes</span>
-                <strong id="monthlyBalance">$0.00</strong>
-            </div>
-
+            <!-- Saldo mínimo previsto -->
             <div class="summary-card minimum-balance-card">
 
-                <span class="summary-label">
-                    Saldo mínimo previsto
-                </span>
+                <div class="summary-card-content">
 
-                <strong id="minimumBalance">
-                    $0.00
-                </strong>
+                    <span class="summary-label">
+                        Saldo mínimo previsto
+                    </span>
 
-                <small id="minimumBalanceDate">
-                </small>
+                    <strong id="minimumBalance">
+                        $0.00
+                    </strong>
+
+                    <small id="minimumBalanceDate">
+                    </small>
+
+                </div>
+
+                <div class="summary-card-icon">
+                    ◈
+                </div>
+
+            </div>
+
+
+            <!-- Ingresos -->
+            <div class="summary-card summary-income">
+
+                <div class="summary-card-content">
+
+                    <span class="summary-label">
+                        Ingresos del mes
+                    </span>
+
+                    <strong id="monthlyIncome">
+                        $0.00
+                    </strong>
+
+                </div>
+
+                <div class="summary-card-icon">
+                    ↗
+                </div>
+
+            </div>
+
+
+            <!-- Egresos -->
+            <div class="summary-card summary-expenses">
+
+                <div class="summary-card-content">
+
+                    <span class="summary-label">
+                        Egresos del mes
+                    </span>
+
+                    <strong id="monthlyExpenses">
+                        $0.00
+                    </strong>
+
+                </div>
+
+                <div class="summary-card-icon">
+                    ↘
+                </div>
+
+            </div>
+
+
+            <!-- Balance -->
+            <div class="summary-card summary-balance">
+
+                <div class="summary-card-content">
+
+                    <span class="summary-label">
+                        Balance del mes
+                    </span>
+
+                    <strong id="monthlyBalance">
+                        $0.00
+                    </strong>
+
+                </div>
+
+                <div class="summary-card-icon">
+                    ±
+                </div>
 
             </div>
 
@@ -102,7 +205,11 @@
                     id="previousMonthButton"
                     class="calendar-navigation-button"
                     aria-label="Mes anterior">
-                    ‹
+
+                    <span aria-hidden="true">
+                        ‹
+                    </span>
+
                 </button>
 
                 <div class="calendar-title-container">
@@ -123,7 +230,11 @@
                     id="nextMonthButton"
                     class="calendar-navigation-button"
                     aria-label="Mes siguiente">
-                    ›
+
+                    <span aria-hidden="true">
+                        ›
+                    </span>
+
                 </button>
 
             </div>
