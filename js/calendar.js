@@ -862,11 +862,46 @@ const creditObligations =
                 );
 
 
-                item.textContent =
-                    `${obligation.creditName}: ` +
-                    `${formatCurrency(
+                const creditName =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                creditName.classList.add(
+                    "credit-obligation-name"
+                );
+
+
+                creditName.textContent =
+                    obligation.creditName;
+
+
+                const creditAmount =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                creditAmount.classList.add(
+                    "credit-obligation-amount"
+                );
+
+
+                creditAmount.textContent =
+                    `: ${formatCurrency(
                         obligation.pendingAmount
                     )}`;
+
+
+                item.appendChild(
+                    creditName
+                );
+
+
+                item.appendChild(
+                    creditAmount
+                );
 
 
                 item.addEventListener(
