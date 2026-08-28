@@ -1383,6 +1383,7 @@ async function renderMonthlyTable(
                     description: movement.description,
                     amount: movement.amount,
                     kind,
+                    category: movement.category || "",
                     color: movement.labelColor || "gray",
                     status: "completed",
                     impact: getTableMovementImpact(movement)
@@ -1401,6 +1402,7 @@ async function renderMonthlyTable(
                         movement.type === "income"
                             ? "Ingreso programado"
                             : "Egreso programado",
+                    category: movement.category || "",
                     color: movement.labelColor || "gray",
                     status: "scheduled",
                     impact:
@@ -1418,6 +1420,7 @@ async function renderMonthlyTable(
                     description: obligation.creditName,
                     amount: obligation.pendingAmount,
                     kind: "Pago de crédito previsto",
+                    category: "Deudas / créditos",
                     color: "gray",
                     status: "scheduled",
                     impact: -obligation.pendingAmount
@@ -1425,195 +1428,179 @@ async function renderMonthlyTable(
             }
         );
 
+        const row =
+            document.createElement(
+                "div"
+            );
+
+        row.classList.add(
+            "monthly-table-row"
+        );
+
         if (
-            events.length === 0
+            dateObject.getDay() === 0
+            ||
+            dateObject.getDay() === 6
         ) {
-            events.push(null);
+            row.classList.add(
+                "weekend"
+            );
+        }
+
+        if (events.length > 1) {
+            row.classList.add(
+                "multiple-movements"
+            );
+        }
+
+        row.dataset.date = date;
+
+        const dayCell =
+            document.createElement("div");
+        dayCell.className = "monthly-table-day";
+        dayCell.textContent = day;
+
+        const weekdayCell =
+            document.createElement("div");
+        weekdayCell.className = "monthly-table-weekday";
+        weekdayCell.textContent = weekday;
+
+        const movementCell =
+            document.createElement("div");
+        movementCell.className = "monthly-table-movement";
+
+        const dailyCell =
+            document.createElement("div");
+        dailyCell.className = "monthly-table-money monthly-table-daily";
+
+        const accumulatedCell =
+            document.createElement("div");
+        accumulatedCell.className = "monthly-table-money monthly-table-accumulated";
+
+        if (
+            balance.dailyBalance !== null
+            &&
+            balance.dailyBalance !== 0
+        ) {
+            dailyCell.textContent =
+                formatSignedCurrency(
+                    balance.dailyBalance
+                );
+
+            dailyCell.classList.add(
+                balance.dailyBalance < 0
+                    ? "balance-negative"
+                    : "balance-positive"
+            );
+        }
+
+        if (
+            balance.accumulatedBalance !== null
+        ) {
+            accumulatedCell.textContent =
+                formatCurrency(
+                    balance.accumulatedBalance
+                );
+
+            if (
+                balance.accumulatedBalance < 0
+            ) {
+                accumulatedCell.classList.add(
+                    "balance-negative"
+                );
+            }
+
+            if (
+                balance.projected
+            ) {
+                accumulatedCell.classList.add(
+                    "projected-balance"
+                );
+                accumulatedCell.title =
+                    "Saldo proyectado";
+            }
         }
 
         events.forEach(
-            (eventData, index) => {
+            eventData => {
 
-                const row =
-                    document.createElement(
-                        "div"
-                    );
+                const movementLine =
+                    document.createElement("div");
+                movementLine.className =
+                    "monthly-table-movement-line";
 
-                row.classList.add(
-                    "monthly-table-row"
+                const dot =
+                    document.createElement("span");
+                dot.classList.add(
+                    "movement-color-dot",
+                    `movement-color-${eventData.color}`
                 );
 
-                if (
-                    dateObject.getDay() === 0
-                    ||
-                    dateObject.getDay() === 6
-                ) {
-                    row.classList.add(
-                        "weekend"
-                    );
-                }
+                const movementText =
+                    document.createElement("span");
+                movementText.className =
+                    "monthly-table-movement-text";
+
+                const description =
+                    document.createElement("span");
+                description.className =
+                    "monthly-table-description";
+                description.textContent =
+                    eventData.description;
+
+                const meta =
+                    document.createElement("span");
+                meta.className =
+                    "monthly-table-movement-meta";
+                meta.textContent =
+                    `${eventData.category ? eventData.category + " · " : ""}${eventData.kind} · ${formatSignedCurrency(eventData.impact, eventData.amount)}`;
 
                 if (
-                    index > 0
+                    eventData.status === "scheduled"
                 ) {
-                    row.classList.add(
-                        "continuation-row"
+                    movementLine.classList.add(
+                        "scheduled"
                     );
                 }
 
-                row.dataset.date = date;
-
-                const dayCell =
-                    document.createElement("div");
-                dayCell.className = "monthly-table-day";
-
-                const weekdayCell =
-                    document.createElement("div");
-                weekdayCell.className = "monthly-table-weekday";
-
-                const movementCell =
-                    document.createElement("div");
-                movementCell.className = "monthly-table-movement";
-
-                const dailyCell =
-                    document.createElement("div");
-                dailyCell.className = "monthly-table-money monthly-table-daily";
-
-                const accumulatedCell =
-                    document.createElement("div");
-                accumulatedCell.className = "monthly-table-money monthly-table-accumulated";
-
-                if (
-                    index === 0
-                ) {
-                    dayCell.textContent = day;
-                    weekdayCell.textContent = weekday;
-
-                    if (
-                        balance.dailyBalance !== null
-                        &&
-                        balance.dailyBalance !== 0
-                    ) {
-                        dailyCell.textContent =
-                            formatSignedCurrency(
-                                balance.dailyBalance
-                            );
-
-                        dailyCell.classList.add(
-                            balance.dailyBalance < 0
-                                ? "balance-negative"
-                                : "balance-positive"
-                        );
-                    }
-
-                    if (
-                        balance.accumulatedBalance !== null
-                    ) {
-                        accumulatedCell.textContent =
-                            formatCurrency(
-                                balance.accumulatedBalance
-                            );
-
-                        if (
-                            balance.accumulatedBalance < 0
-                        ) {
-                            accumulatedCell.classList.add(
-                                "balance-negative"
-                            );
-                        }
-
-                        if (
-                            balance.projected
-                        ) {
-                            accumulatedCell.classList.add(
-                                "projected-balance"
-                            );
-                            accumulatedCell.title =
-                                "Saldo proyectado";
-                        }
-                    }
-                }
-
-                if (eventData) {
-
-                    const movementLine =
-                        document.createElement("div");
-                    movementLine.className =
-                        "monthly-table-movement-line";
-
-                    const dot =
-                        document.createElement("span");
-                    dot.classList.add(
-                        "movement-color-dot",
-                        `movement-color-${eventData.color}`
-                    );
-
-                    const movementText =
-                        document.createElement("span");
-                    movementText.className =
-                        "monthly-table-movement-text";
-
-                    const description =
-                        document.createElement("span");
-                    description.className =
-                        "monthly-table-description";
-                    description.textContent =
-                        eventData.description;
-
-                    const meta =
-                        document.createElement("span");
-                    meta.className =
-                        "monthly-table-movement-meta";
-                    meta.textContent =
-                        `${eventData.kind} · ${formatSignedCurrency(eventData.impact, eventData.amount)}`;
-
-                    if (
-                        eventData.status === "scheduled"
-                    ) {
-                        movementLine.classList.add(
-                            "scheduled"
-                        );
-                    }
-
-                    movementText.appendChild(
-                        description
-                    );
-                    movementText.appendChild(
-                        meta
-                    );
-                    movementLine.appendChild(dot);
-                    movementLine.appendChild(
-                        movementText
-                    );
-                    movementCell.appendChild(
-                        movementLine
-                    );
-                }
-
-                row.appendChild(dayCell);
-                row.appendChild(weekdayCell);
-                row.appendChild(movementCell);
-                row.appendChild(dailyCell);
-                row.appendChild(accumulatedCell);
-
-                row.addEventListener(
-                    "click",
-                    () => {
-                        window.dispatchEvent(
-                            new CustomEvent(
-                                "openDayDetail",
-                                {
-                                    detail: { date }
-                                }
-                            )
-                        );
-                    }
+                movementText.appendChild(
+                    description
                 );
-
-                body.appendChild(row);
+                movementText.appendChild(
+                    meta
+                );
+                movementLine.appendChild(dot);
+                movementLine.appendChild(
+                    movementText
+                );
+                movementCell.appendChild(
+                    movementLine
+                );
 
             }
         );
+
+        row.appendChild(dayCell);
+        row.appendChild(weekdayCell);
+        row.appendChild(movementCell);
+        row.appendChild(dailyCell);
+        row.appendChild(accumulatedCell);
+
+        row.addEventListener(
+            "click",
+            () => {
+                window.dispatchEvent(
+                    new CustomEvent(
+                        "openDayDetail",
+                        {
+                            detail: { date }
+                        }
+                    )
+                );
+            }
+        );
+
+        body.appendChild(row);
 
     }
 

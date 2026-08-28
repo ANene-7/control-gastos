@@ -1,7 +1,251 @@
 const DATABASE_NAME = "ControlGastosDB";
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 let database = null;
+
+
+const SYNC_SYSTEM_STORES = new Set([
+    "syncMeta",
+    "syncQueue"
+]);
+
+
+function generateSyncId(prefix) {
+
+    if (
+        typeof crypto !== "undefined" &&
+        typeof crypto.randomUUID === "function"
+    ) {
+
+        return `${prefix}-${crypto.randomUUID()}`;
+
+    }
+
+
+    return (
+        `${prefix}-` +
+        Date.now() +
+        "-" +
+        Math.random()
+            .toString(36)
+            .substring(2, 11)
+    );
+
+}
+
+
+function ensureSyncDeviceIdentity() {
+
+    return new Promise((resolve, reject) => {
+
+        if (!database) {
+
+            reject(
+                new Error(
+                    "La base de datos no está inicializada."
+                )
+            );
+
+            return;
+
+        }
+
+
+        const transaction =
+            database.transaction(
+                "syncMeta",
+                "readwrite"
+            );
+
+
+        const store =
+            transaction.objectStore(
+                "syncMeta"
+            );
+
+
+        const request =
+            store.get(
+                "device"
+            );
+
+
+        request.onsuccess = () => {
+
+            if (request.result) {
+
+                resolve(
+                    request.result
+                );
+
+                return;
+
+            }
+
+
+            const now =
+                new Date()
+                    .toISOString();
+
+
+            const device = {
+                id: "device",
+                deviceId:
+                    generateSyncId(
+                        "device"
+                    ),
+                createdAt:
+                    now,
+                updatedAt:
+                    now
+            };
+
+
+            const saveRequest =
+                store.put(
+                    device
+                );
+
+
+            saveRequest.onsuccess =
+                () => resolve(device);
+
+
+            saveRequest.onerror =
+                () => reject(
+                    saveRequest.error
+                );
+
+        };
+
+
+        request.onerror =
+            () => reject(
+                request.error
+            );
+
+    });
+
+}
+
+
+function queueSyncMutation(
+    operation,
+    storeName,
+    recordId = null,
+    payload = null
+) {
+
+    if (
+        !database ||
+        SYNC_SYSTEM_STORES.has(
+            storeName
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const transaction =
+            database.transaction(
+                [
+                    "syncMeta",
+                    "syncQueue"
+                ],
+                "readwrite"
+            );
+
+
+        const metaStore =
+            transaction.objectStore(
+                "syncMeta"
+            );
+
+
+        const queueStore =
+            transaction.objectStore(
+                "syncQueue"
+            );
+
+
+        const deviceRequest =
+            metaStore.get(
+                "device"
+            );
+
+
+        deviceRequest.onsuccess = () => {
+
+            const now =
+                new Date()
+                    .toISOString();
+
+
+            const device =
+                deviceRequest.result;
+
+
+            queueStore.put({
+                id:
+                    generateSyncId(
+                        "change"
+                    ),
+                deviceId:
+                    device?.deviceId ||
+                    "unknown-device",
+                operation,
+                storeName,
+                recordId:
+                    recordId ?? null,
+                payload:
+                    payload ?? null,
+                changedAt:
+                    now,
+                status:
+                    "pending"
+            });
+
+
+            metaStore.put({
+                id:
+                    "syncState",
+                lastLocalChangeAt:
+                    now,
+                updatedAt:
+                    now
+            });
+
+        };
+
+
+        transaction.onerror = () => {
+
+            console.warn(
+                "No se pudo registrar un cambio para sincronización futura:",
+                transaction.error
+            );
+
+        };
+
+    } catch (error) {
+
+        /*
+            La cola es auxiliar. Nunca debe
+            bloquear el guardado local principal.
+        */
+
+        console.warn(
+            "No se pudo preparar el cambio para sincronización futura:",
+            error
+        );
+
+    }
+
+}
 
 
 /*
@@ -246,6 +490,60 @@ export function initializeDatabase() {
 
             }
 
+
+            /*
+                BASE DE SINCRONIZACIÓN
+
+                Estos almacenes todavía no envían
+                información a ningún servidor.
+                Sirven para registrar la identidad
+                local del dispositivo y una cola de
+                cambios preparada para una futura
+                sincronización entre dispositivos.
+            */
+
+            if (!database.objectStoreNames.contains("syncMeta")) {
+
+                database.createObjectStore(
+                    "syncMeta",
+                    {
+                        keyPath: "id"
+                    }
+                );
+
+            }
+
+
+            if (!database.objectStoreNames.contains("syncQueue")) {
+
+                const syncQueueStore =
+                    database.createObjectStore(
+                        "syncQueue",
+                        {
+                            keyPath: "id"
+                        }
+                    );
+
+
+                syncQueueStore.createIndex(
+                    "changedAt",
+                    "changedAt",
+                    {
+                        unique: false
+                    }
+                );
+
+
+                syncQueueStore.createIndex(
+                    "storeName",
+                    "storeName",
+                    {
+                        unique: false
+                    }
+                );
+
+            }
+
         };
 
 
@@ -266,7 +564,29 @@ export function initializeDatabase() {
                 DATABASE_NAME
             );
 
-            resolve(databaseInstance);
+
+            ensureSyncDeviceIdentity()
+                .then(
+                    () => resolve(databaseInstance)
+                )
+                .catch(
+                    error => {
+
+                        /*
+                            La sincronización futura no
+                            debe impedir que la app local
+                            funcione si su metadata falla.
+                        */
+
+                        console.warn(
+                            "No se pudo preparar la metadata de sincronización:",
+                            error
+                        );
+
+                        resolve(databaseInstance);
+
+                    }
+                );
 
         };
 
@@ -329,6 +649,13 @@ export function addRecord(
 
 
         request.onsuccess = () => {
+
+            queueSyncMutation(
+                "add",
+                storeName,
+                record?.id ?? null,
+                record
+            );
 
             resolve(record);
 
@@ -447,6 +774,13 @@ export function saveRecord(
 
         request.onsuccess = () => {
 
+            queueSyncMutation(
+                "put",
+                storeName,
+                record?.id ?? null,
+                record
+            );
+
             resolve(record);
 
         };
@@ -561,6 +895,12 @@ export function deleteRecord(
 
             request.onsuccess = () => {
 
+                queueSyncMutation(
+                    "delete",
+                    storeName,
+                    id
+                );
+
                 resolve();
 
             };
@@ -617,6 +957,11 @@ export function clearStore(
 
 
             request.onsuccess = () => {
+
+                queueSyncMutation(
+                    "clear",
+                    storeName
+                );
 
                 resolve();
 
@@ -712,6 +1057,13 @@ export function replaceStoreRecords(
             transaction.oncomplete =
                 () => {
 
+                    queueSyncMutation(
+                        "replace",
+                        storeName,
+                        null,
+                        records
+                    );
+
                     resolve();
 
                 };
@@ -741,5 +1093,80 @@ export function replaceStoreRecords(
 
         }
     );
+
+}
+
+
+export async function getSyncFoundationStatus() {
+
+    if (!database) {
+
+        throw new Error(
+            "La base de datos no está inicializada."
+        );
+
+    }
+
+
+    const [
+        device,
+        syncState,
+        queue
+    ] =
+        await Promise.all([
+            getRecord(
+                "syncMeta",
+                "device"
+            ),
+            getRecord(
+                "syncMeta",
+                "syncState"
+            ),
+            getAllRecords(
+                "syncQueue"
+            )
+        ]);
+
+
+    return {
+        ready:
+            Boolean(
+                device?.deviceId
+            ),
+        deviceId:
+            device?.deviceId || null,
+        pendingChanges:
+            queue.filter(
+                item =>
+                    item.status ===
+                    "pending"
+            ).length,
+        lastLocalChangeAt:
+            syncState?.lastLocalChangeAt ||
+            null
+    };
+
+}
+
+
+export async function clearSyncSystemData() {
+
+    if (!database) {
+
+        throw new Error(
+            "La base de datos no está inicializada."
+        );
+
+    }
+
+
+    await Promise.all([
+        clearStore(
+            "syncQueue"
+        ),
+        clearStore(
+            "syncMeta"
+        )
+    ]);
 
 }

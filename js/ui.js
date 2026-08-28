@@ -9,15 +9,30 @@ import {
 } from "./calendar.js";
 
 import {
+    calculateCreditObligations
+} from "./creditCalculations.js";
+
+import {
     saveRecord,
     getAllRecords,
     deleteRecord,
-    replaceStoreRecords
+    clearStore,
+    replaceStoreRecords,
+    getSyncFoundationStatus
 } from "./database.js";
 
 import {
     setSettings
 } from "./state.js";
+
+import {
+    getNotificationCapability,
+    getNotificationPreferences,
+    saveNotificationPreferences,
+    requestNotificationPermission,
+    sendTestNotification,
+    checkDueNotifications
+} from "./notifications.js";
 
 
 /*
@@ -30,6 +45,78 @@ let editingCreditId =
 
 
 export async function initializeUI(settings) {  
+
+    /*
+        APARIENCIA
+    */
+
+    const appearanceThemeSelect =
+        document.getElementById("appearanceThemeSelect");
+
+    const themeColorMeta =
+        document.getElementById("themeColorMeta");
+
+    const systemThemeQuery =
+        window.matchMedia
+            ? window.matchMedia("(prefers-color-scheme: dark)")
+            : null;
+
+    const getThemePreference = () =>
+        localStorage.getItem("cg-theme-preference") || "system";
+
+    const resolveTheme = (preference) => {
+
+        if (preference === "dark" || preference === "light") {
+            return preference;
+        }
+
+        return systemThemeQuery?.matches ? "dark" : "light";
+
+    };
+
+    const applyThemePreference = (preference) => {
+
+        const normalized =
+            ["system", "light", "dark"].includes(preference)
+                ? preference
+                : "system";
+
+        const resolved = resolveTheme(normalized);
+
+        document.documentElement.dataset.themePreference = normalized;
+        document.documentElement.dataset.theme = resolved;
+
+        localStorage.setItem("cg-theme-preference", normalized);
+
+        if (themeColorMeta) {
+            themeColorMeta.setAttribute(
+                "content",
+                resolved === "dark" ? "#081426" : "#ffffff"
+            );
+        }
+
+        if (appearanceThemeSelect && appearanceThemeSelect.value !== normalized) {
+            appearanceThemeSelect.value = normalized;
+        }
+
+    };
+
+    applyThemePreference(getThemePreference());
+
+    if (appearanceThemeSelect) {
+        appearanceThemeSelect.value = getThemePreference();
+        appearanceThemeSelect.addEventListener("change", () => {
+            applyThemePreference(appearanceThemeSelect.value);
+        });
+    }
+
+    if (systemThemeQuery) {
+        systemThemeQuery.addEventListener?.("change", () => {
+            if (getThemePreference() === "system") {
+                applyThemePreference("system");
+            }
+        });
+    }
 
     /*
         ELEMENTOS DEL DOM
@@ -80,6 +167,12 @@ export async function initializeUI(settings) {
     const settingsModal =
         document.getElementById(
             "settingsModal"
+        );
+
+
+    const closeSettingsModalButton =
+        document.getElementById(
+            "closeSettingsModalButton"
         );
 
 
@@ -186,6 +279,12 @@ export async function initializeUI(settings) {
             "fixedMovementAmount"
         );
 
+
+    const fixedMovementCategory =
+        document.getElementById(
+            "fixedMovementCategory"
+        );
+
     const fixedMovementFrequency =
         document.getElementById(
             "fixedMovementFrequency"
@@ -229,6 +328,32 @@ export async function initializeUI(settings) {
     const cancelCreditButton =
         document.getElementById(
             "cancelCreditButton"
+        );
+
+
+    const creditDetailModal =
+        document.getElementById(
+            "creditDetailModal"
+        );
+
+    const closeCreditDetailModalButton =
+        document.getElementById(
+            "closeCreditDetailModalButton"
+        );
+
+    const creditDetailTitle =
+        document.getElementById(
+            "creditDetailTitle"
+        );
+
+    const creditDetailSubtitle =
+        document.getElementById(
+            "creditDetailSubtitle"
+        );
+
+    const creditDetailContent =
+        document.getElementById(
+            "creditDetailContent"
         );
 
     const creditForm =
@@ -321,6 +446,78 @@ export async function initializeUI(settings) {
         );
 
 
+    const resetAppButton =
+        document.getElementById(
+            "resetAppButton"
+        );
+
+
+    const syncStatusBadge =
+        document.getElementById(
+            "syncStatusBadge"
+        );
+
+
+    const syncPendingCount =
+        document.getElementById(
+            "syncPendingCount"
+        );
+
+
+    const syncLastChange =
+        document.getElementById(
+            "syncLastChange"
+        );
+
+
+    const notificationStatusBadge =
+        document.getElementById(
+            "notificationStatusBadge"
+        );
+
+
+    const notificationsEnabled =
+        document.getElementById(
+            "notificationsEnabled"
+        );
+
+
+    const notifyScheduledMovements =
+        document.getElementById(
+            "notifyScheduledMovements"
+        );
+
+
+    const notifyCreditPayments =
+        document.getElementById(
+            "notifyCreditPayments"
+        );
+
+
+    const notificationReminderDays =
+        document.getElementById(
+            "notificationReminderDays"
+        );
+
+
+    const requestNotificationPermissionButton =
+        document.getElementById(
+            "requestNotificationPermissionButton"
+        );
+
+
+    const testNotificationButton =
+        document.getElementById(
+            "testNotificationButton"
+        );
+
+
+    const saveNotificationSettingsButton =
+        document.getElementById(
+            "saveNotificationSettingsButton"
+        );
+
+
     const headerMenu =
         document.getElementById(
             "headerMenu"
@@ -393,9 +590,375 @@ export async function initializeUI(settings) {
 
     /*
         =================================
-        EXPORTAR RESPALDO
+        BASE DE SINCRONIZACIÓN
         =================================
+
+        Todavía no existe una cuenta o
+        servidor conectado. Esta vista
+        solamente confirma que el dispositivo
+        ya registra una cola local de cambios
+        preparada para sincronización futura.
     */
+
+    async function renderSyncFoundationStatus() {
+
+        if (
+            !syncStatusBadge ||
+            !syncPendingCount ||
+            !syncLastChange
+        ) {
+
+            return;
+
+        }
+
+
+        try {
+
+            const status =
+                await getSyncFoundationStatus();
+
+
+            syncStatusBadge.textContent =
+                status.ready
+                    ? "Preparada · Local"
+                    : "No disponible";
+
+
+            syncStatusBadge.classList.toggle(
+                "is-ready",
+                status.ready
+            );
+
+
+            syncPendingCount.textContent =
+                String(
+                    status.pendingChanges
+                );
+
+
+            if (status.lastLocalChangeAt) {
+
+                const date =
+                    new Date(
+                        status.lastLocalChangeAt
+                    );
+
+
+                syncLastChange.textContent =
+                    Number.isNaN(
+                        date.getTime()
+                    )
+                        ? "—"
+                        : date.toLocaleString(
+                            "es-MX",
+                            {
+                                dateStyle:
+                                    "medium",
+                                timeStyle:
+                                    "short"
+                            }
+                        );
+
+            } else {
+
+                syncLastChange.textContent =
+                    "Sin cambios nuevos en esta versión";
+
+            }
+
+
+        } catch (error) {
+
+            console.warn(
+                "No se pudo consultar el estado de sincronización local:",
+                error
+            );
+
+
+            syncStatusBadge.textContent =
+                "No disponible";
+
+            syncStatusBadge.classList.remove(
+                "is-ready"
+            );
+
+            syncPendingCount.textContent =
+                "—";
+
+            syncLastChange.textContent =
+                "—";
+
+        }
+
+    }
+
+
+    /*
+        =================================
+        NOTIFICACIONES PWA
+        =================================
+
+        En esta etapa los recordatorios se
+        comprueban al abrir la app o cuando
+        vuelve al primer plano. No fingimos
+        tener un scheduler mágico en segundo
+        plano porque los navegadores tampoco.
+    */
+
+    function renderNotificationPermissionStatus() {
+
+        if (!notificationStatusBadge) {
+            return;
+        }
+
+        const capability =
+            getNotificationCapability();
+
+        notificationStatusBadge.classList.remove(
+            "is-ready",
+            "is-warning"
+        );
+
+        if (!capability.supported) {
+
+            notificationStatusBadge.textContent =
+                "No compatible";
+
+            return;
+        }
+
+        if (capability.permission === "granted") {
+
+            notificationStatusBadge.textContent =
+                "Permiso activo";
+
+            notificationStatusBadge.classList.add(
+                "is-ready"
+            );
+
+            return;
+        }
+
+        if (capability.permission === "denied") {
+
+            notificationStatusBadge.textContent =
+                "Permiso bloqueado";
+
+            notificationStatusBadge.classList.add(
+                "is-warning"
+            );
+
+            return;
+        }
+
+        notificationStatusBadge.textContent =
+            "Permiso pendiente";
+
+        notificationStatusBadge.classList.add(
+            "is-warning"
+        );
+
+    }
+
+
+    async function renderNotificationPreferences() {
+
+        if (
+            !notificationsEnabled ||
+            !notifyScheduledMovements ||
+            !notifyCreditPayments ||
+            !notificationReminderDays
+        ) {
+            return;
+        }
+
+        const preferences =
+            await getNotificationPreferences();
+
+        notificationsEnabled.checked =
+            Boolean(preferences.enabled);
+
+        notifyScheduledMovements.checked =
+            Boolean(
+                preferences.notifyScheduledMovements
+            );
+
+        notifyCreditPayments.checked =
+            Boolean(
+                preferences.notifyCreditPayments
+            );
+
+        notificationReminderDays.value =
+            String(
+                preferences.reminderDays ?? 1
+            );
+
+        renderNotificationPermissionStatus();
+
+    }
+
+
+    requestNotificationPermissionButton?.addEventListener(
+        "click",
+        async () => {
+
+            const permission =
+                await requestNotificationPermission();
+
+            renderNotificationPermissionStatus();
+
+            if (permission === "granted") {
+
+                showNotification(
+                    "Permiso de notificaciones activado."
+                );
+
+                return;
+            }
+
+            if (permission === "denied") {
+
+                showNotification(
+                    "El navegador bloqueó las notificaciones. Puedes habilitarlas desde los permisos del sitio.",
+                    "error"
+                );
+
+                return;
+            }
+
+            showNotification(
+                "Este navegador no admite notificaciones PWA.",
+                "error"
+            );
+
+        }
+    );
+
+
+    testNotificationButton?.addEventListener(
+        "click",
+        async () => {
+
+            const capability =
+                getNotificationCapability();
+
+            if (
+                !capability.supported ||
+                capability.permission !== "granted"
+            ) {
+
+                showNotification(
+                    "Activa primero el permiso de notificaciones.",
+                    "error"
+                );
+
+                return;
+            }
+
+            const shown =
+                await sendTestNotification();
+
+            showNotification(
+                shown
+                    ? "Notificación de prueba enviada."
+                    : "No se pudo mostrar la notificación de prueba.",
+                shown ? "success" : "error"
+            );
+
+        }
+    );
+
+
+    saveNotificationSettingsButton?.addEventListener(
+        "click",
+        async () => {
+
+            if (
+                !notificationsEnabled ||
+                !notifyScheduledMovements ||
+                !notifyCreditPayments ||
+                !notificationReminderDays
+            ) {
+                return;
+            }
+
+            const capability =
+                getNotificationCapability();
+
+            if (
+                notificationsEnabled.checked &&
+                capability.permission !== "granted"
+            ) {
+
+                showNotification(
+                    "Para activar recordatorios necesitas conceder primero el permiso del navegador.",
+                    "error"
+                );
+
+                return;
+            }
+
+            try {
+
+                await saveNotificationPreferences({
+                    enabled:
+                        notificationsEnabled.checked,
+                    notifyScheduledMovements:
+                        notifyScheduledMovements.checked,
+                    notifyCreditPayments:
+                        notifyCreditPayments.checked,
+                    reminderDays:
+                        Number(
+                            notificationReminderDays.value
+                        )
+                });
+
+                showNotification(
+                    "Preferencias de notificaciones guardadas."
+                );
+
+                if (notificationsEnabled.checked) {
+                    checkDueNotifications();
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudieron guardar las preferencias de notificaciones:",
+                    error
+                );
+
+                showNotification(
+                    "No se pudieron guardar las preferencias de notificaciones.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        =================================
+        DATOS Y RESPALDO
+        =================================
+
+        El respaldo V2 incluye todos los
+        almacenes financieros actuales.
+        Conservamos compatibilidad con los
+        respaldos V1 generados anteriormente.
+    */
+
+    const BACKUP_STORES = [
+        "settings",
+        "movements",
+        "credits",
+        "recurringRules",
+        "creditAdjustments"
+    ];
+
 
     exportBackupButton.addEventListener(
         "click",
@@ -403,22 +966,16 @@ export async function initializeUI(settings) {
 
             try {
 
-                const settingsRecords =
-                    await getAllRecords(
-                        "settings"
-                    );
+                const data = {};
 
+                for (const storeName of BACKUP_STORES) {
 
-                const movements =
-                    await getAllRecords(
-                        "movements"
-                    );
+                    data[storeName] =
+                        await getAllRecords(
+                            storeName
+                        );
 
-
-                const credits =
-                    await getAllRecords(
-                        "credits"
-                    );
+                }
 
 
                 const backup = {
@@ -426,26 +983,14 @@ export async function initializeUI(settings) {
                     app:
                         "Control de Gastos",
 
-
                     version:
-                        1,
-
+                        2,
 
                     exportedAt:
                         new Date()
                             .toISOString(),
 
-
-                    data: {
-
-                        settings:
-                            settingsRecords,
-
-                        movements,
-
-                        credits
-
-                    }
+                    data
 
                 };
 
@@ -498,8 +1043,6 @@ export async function initializeUI(settings) {
 
 
                 link.click();
-
-
                 link.remove();
 
 
@@ -509,7 +1052,7 @@ export async function initializeUI(settings) {
 
 
                 showNotification(
-                    "Respaldo exportado correctamente."
+                    "Respaldo completo exportado correctamente."
                 );
 
 
@@ -532,21 +1075,9 @@ export async function initializeUI(settings) {
     );
 
 
-    /*
-        =================================
-        IMPORTAR RESPALDO
-        =================================
-    */
-
     importBackupButton.addEventListener(
         "click",
         () => {
-
-            /*
-                Limpiamos el valor para permitir
-                seleccionar dos veces seguidas
-                el mismo archivo.
-            */
 
             backupFileInput.value =
                 "";
@@ -599,11 +1130,6 @@ export async function initializeUI(settings) {
                 }
 
 
-                /*
-                    Validar identidad
-                    y versión.
-                */
-
                 if (
                     backup.app !==
                         "Control de Gastos"
@@ -617,8 +1143,9 @@ export async function initializeUI(settings) {
 
 
                 if (
-                    backup.version !==
-                        1
+                    ![1, 2].includes(
+                        backup.version
+                    )
                 ) {
 
                     throw new Error(
@@ -648,10 +1175,31 @@ export async function initializeUI(settings) {
                 }
 
 
-                /*
-                    Confirmación antes de
-                    reemplazar información.
-                */
+                const normalizedData = {
+                    settings:
+                        backup.data.settings,
+
+                    movements:
+                        backup.data.movements,
+
+                    credits:
+                        backup.data.credits,
+
+                    recurringRules:
+                        Array.isArray(
+                            backup.data.recurringRules
+                        )
+                            ? backup.data.recurringRules
+                            : [],
+
+                    creditAdjustments:
+                        Array.isArray(
+                            backup.data.creditAdjustments
+                        )
+                            ? backup.data.creditAdjustments
+                            : []
+                };
+
 
                 const confirmed =
                     await showConfirmDialog({
@@ -659,10 +1207,10 @@ export async function initializeUI(settings) {
                             "Importar respaldo",
 
                         message:
-                            "Los datos actuales serán reemplazados por los del respaldo. Esta acción no se puede deshacer.",
+                            "Los datos actuales serán reemplazados por los del respaldo seleccionado. Antes de continuar, asegúrate de haber exportado una copia si necesitas conservar el estado actual.",
 
                         confirmText:
-                            "Importar",
+                            "Continuar",
 
                         cancelText:
                             "Cancelar"
@@ -676,45 +1224,43 @@ export async function initializeUI(settings) {
                 }
 
 
-                /*
-                    Restaurar cada store.
-                */
+                const finalConfirmation =
+                    await showConfirmDialog({
+                        title:
+                            "Confirmar restauración",
 
-                await replaceStoreRecords(
-                    "settings",
-                    backup.data.settings
-                );
+                        message:
+                            "Esta acción reemplazará la información guardada en este dispositivo y no se puede deshacer desde la app.",
+
+                        confirmText:
+                            "Importar respaldo",
+
+                        cancelText:
+                            "Volver"
+                    });
 
 
-                await replaceStoreRecords(
-                    "movements",
-                    backup.data.movements
-                );
+                if (!finalConfirmation) {
+
+                    return;
+
+                }
 
 
-                await replaceStoreRecords(
-                    "credits",
-                    backup.data.credits
-                );
+                for (const storeName of BACKUP_STORES) {
+
+                    await replaceStoreRecords(
+                        storeName,
+                        normalizedData[storeName]
+                    );
+
+                }
 
 
                 showNotification(
                     "Respaldo restaurado correctamente."
                 );
 
-
-                /*
-                    Recargamos para que:
-
-                    - state.js
-                    - configuración
-                    - créditos
-                    - calendario
-                    - saldo
-
-                    vuelvan a inicializarse
-                    desde IndexedDB.
-                */
 
                 setTimeout(
                     () => {
@@ -737,6 +1283,106 @@ export async function initializeUI(settings) {
                 showNotification(
                     error.message ||
                     "No se pudo importar el respaldo.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+    resetAppButton.addEventListener(
+        "click",
+        async () => {
+
+            const confirmed =
+                await showConfirmDialog({
+                    title:
+                        "Restaurar app",
+
+                    message:
+                        "Se eliminarán todos los movimientos, créditos, recurrencias, ajustes y configuración guardados en este dispositivo. Te recomendamos exportar un respaldo antes de continuar.",
+
+                    confirmText:
+                        "Entiendo, continuar",
+
+                    cancelText:
+                        "Cancelar"
+                });
+
+
+            if (!confirmed) {
+
+                return;
+
+            }
+
+
+            const finalConfirmation =
+                await showConfirmDialog({
+                    title:
+                        "¿Borrar toda la información?",
+
+                    message:
+                        "Esta es la última confirmación. La app volverá al estado inicial y los datos eliminados no podrán recuperarse salvo que tengas un respaldo exportado.",
+
+                    confirmText:
+                        "Borrar todo",
+
+                    cancelText:
+                        "Conservar mis datos"
+                });
+
+
+            if (!finalConfirmation) {
+
+                return;
+
+            }
+
+
+            try {
+
+                for (const storeName of BACKUP_STORES) {
+
+                    await clearStore(
+                        storeName
+                    );
+
+                }
+
+
+                setSettings(
+                    null
+                );
+
+
+                showNotification(
+                    "La información fue eliminada. Reiniciando la app."
+                );
+
+
+                setTimeout(
+                    () => {
+
+                        window.location.reload();
+
+                    },
+                    700
+                );
+
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo restaurar la app:",
+                    error
+                );
+
+
+                showNotification(
+                    "No se pudo eliminar toda la información.",
                     "error"
                 );
 
@@ -810,6 +1456,37 @@ export async function initializeUI(settings) {
             creditsModal.classList.add(
                 "hidden"
             );
+
+        }
+    );
+
+
+    closeCreditDetailModalButton.addEventListener(
+        "click",
+        () => {
+
+            creditDetailModal.classList.add(
+                "hidden"
+            );
+
+        }
+    );
+
+
+    creditDetailModal.addEventListener(
+        "click",
+        event => {
+
+            if (
+                event.target ===
+                creditDetailModal
+            ) {
+
+                creditDetailModal.classList.add(
+                    "hidden"
+                );
+
+            }
 
         }
     );
@@ -1401,6 +2078,7 @@ export async function initializeUI(settings) {
         fixedMovementForm.reset();
         fixedMovementEditingId.value = "";
         fixedMovementType.value = "expense";
+        if (fixedMovementCategory) fixedMovementCategory.value = "";
         fixedMovementFrequency.value = "monthly";
         fixedMovementPaymentMethod.value = "debit";
         cancelFixedMovementEditButton.classList.add("hidden");
@@ -1460,6 +2138,7 @@ export async function initializeUI(settings) {
                 fixedMovementEditingId.value = rule.id;
                 fixedMovementType.value = rule.type || "expense";
                 fixedMovementDescription.value = rule.description || "";
+                if (fixedMovementCategory) fixedMovementCategory.value = rule.category || "";
                 fixedMovementAmount.value = Number(rule.amount || 0);
                 fixedMovementFrequency.value = rule.recurrence?.type || "monthly";
                 fixedMovementStartDate.value = rule.scheduledDate || "";
@@ -1517,6 +2196,20 @@ export async function initializeUI(settings) {
 
             const existingId = fixedMovementEditingId.value;
             const type = fixedMovementType.value;
+            const category = fixedMovementCategory?.value || "";
+            const categoryColors = {
+                "Alimentación": "yellow",
+                "Transporte": "blue",
+                "Vivienda": "purple",
+                "Servicios": "blue",
+                "Salud": "red",
+                "Educación": "purple",
+                "Entretenimiento": "yellow",
+                "Compras": "red",
+                "Deudas / créditos": "red",
+                "Ahorro": "green",
+                "Otros": "gray"
+            };
 
             const fixedRule = {
                 id: existingId || `fixed-${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -1533,7 +2226,8 @@ export async function initializeUI(settings) {
                 recurrence: {
                     type: fixedMovementFrequency.value
                 },
-                labelColor: type === "income" ? "green" : "red",
+                category,
+                labelColor: categoryColors[category] || (type === "income" ? "green" : "red"),
                 notes: "Movimiento fijo configurado desde Configuración",
                 createdAt: new Date().toISOString()
             };
@@ -1619,6 +2313,7 @@ export async function initializeUI(settings) {
                             payrollWeekendDirection.value
                     }
                 },
+                category: "Nómina",
                 labelColor: "green",
                 notes: "Nómina configurada desde Configuración",
                 createdAt: new Date().toISOString()
@@ -1665,7 +2360,7 @@ export async function initializeUI(settings) {
 
     settingsButton.addEventListener(
         "click",
-        () => {
+        async () => {
 
             headerMenu.classList.remove(
                 "open"
@@ -1684,7 +2379,27 @@ export async function initializeUI(settings) {
 
             renderPayrollList();
             renderFixedMovementList();
+            await renderSyncFoundationStatus();
+            await renderNotificationPreferences();
 
+        }
+    );
+
+
+    closeSettingsModalButton.addEventListener(
+        "click",
+        () => {
+            settingsModal.classList.add("hidden");
+        }
+    );
+
+
+    settingsModal.addEventListener(
+        "click",
+        (event) => {
+            if (event.target === settingsModal) {
+                settingsModal.classList.add("hidden");
+            }
         }
     );
 
@@ -2363,6 +3078,732 @@ export async function updateCurrentBalance() {
     Cargar créditos desde IndexedDB.
 */
 
+function calculateRegisteredCreditUsage(
+    credit,
+    movements = []
+) {
+
+    const creditId =
+        String(credit.id);
+
+
+    let purchases = 0;
+    let payments = 0;
+
+
+    movements.forEach(
+        movement => {
+
+            if (
+                movement.status !==
+                "completed"
+            ) {
+
+                return;
+
+            }
+
+
+            if (
+                String(
+                    movement.creditId ??
+                    ""
+                ) !==
+                creditId
+            ) {
+
+                return;
+
+            }
+
+
+            const amount =
+                Number(
+                    movement.amount
+                );
+
+
+            if (
+                !Number.isFinite(amount)
+                ||
+                amount <= 0
+            ) {
+
+                return;
+
+            }
+
+
+            /*
+                Compra registrada con el crédito.
+            */
+
+            if (
+                movement.type ===
+                    "expense"
+                &&
+                movement.purpose !==
+                    "creditPayment"
+                &&
+                movement.paymentMethod ===
+                    "credit"
+            ) {
+
+                purchases +=
+                    amount;
+
+                return;
+
+            }
+
+
+            /*
+                Pago o abono registrado al crédito.
+            */
+
+            if (
+                movement.type ===
+                    "expense"
+                &&
+                movement.purpose ===
+                    "creditPayment"
+            ) {
+
+                payments +=
+                    amount;
+
+            }
+
+        }
+    );
+
+
+    const used =
+        Math.max(
+            0,
+            purchases - payments
+        );
+
+
+    const limit =
+        Number(
+            credit.creditLimit
+        );
+
+
+    const hasValidLimit =
+        Number.isFinite(limit)
+        &&
+        limit >= 0;
+
+
+    const available =
+        hasValidLimit
+            ? limit - used
+            : null;
+
+
+    const utilization =
+        hasValidLimit
+        &&
+        limit > 0
+            ? (used / limit) * 100
+            : 0;
+
+
+    return {
+        purchases,
+        payments,
+        used,
+        available,
+        utilization
+    };
+
+}
+
+
+function getNextPendingCreditObligation(
+    credit,
+    obligations = []
+) {
+
+    const creditId =
+        String(
+            credit.id
+        );
+
+
+    const pending =
+        obligations
+            .filter(
+                obligation =>
+                    String(
+                        obligation.creditId
+                    ) === creditId
+                    &&
+                    Number(
+                        obligation.pendingAmount
+                    ) > 0.005
+            )
+            .sort(
+                (a, b) =>
+                    String(
+                        a.dueDate
+                    ).localeCompare(
+                        String(
+                            b.dueDate
+                        )
+                    )
+            );
+
+
+    return pending[0] ?? null;
+
+}
+
+
+
+function renderCreditDetail(
+    credit,
+    movements = [],
+    obligations = [],
+    modal,
+    titleElement,
+    subtitleElement,
+    contentElement
+) {
+
+    const creditId =
+        String(
+            credit.id
+        );
+
+
+    const creditTypeLabel =
+        credit.type === "creditCard"
+            ? "Tarjeta de crédito"
+            : credit.type === "storeCredit"
+                ? "Crédito de tienda"
+                : "Otro crédito";
+
+
+    const usage =
+        calculateRegisteredCreditUsage(
+            credit,
+            movements
+        );
+
+
+    const creditMovements =
+        movements
+            .filter(
+                movement =>
+                    String(
+                        movement.creditId ?? ""
+                    ) === creditId
+            );
+
+
+    const purchases =
+        creditMovements
+            .filter(
+                movement =>
+                    movement.status === "completed"
+                    &&
+                    movement.type === "expense"
+                    &&
+                    movement.paymentMethod === "credit"
+                    &&
+                    movement.completedDate
+                    &&
+                    movement.purpose !== "creditPayment"
+            )
+            .sort(
+                (a, b) =>
+                    String(
+                        b.completedDate
+                    ).localeCompare(
+                        String(
+                            a.completedDate
+                        )
+                    )
+            );
+
+
+    const payments =
+        creditMovements
+            .filter(
+                movement =>
+                    movement.status === "completed"
+                    &&
+                    movement.type === "expense"
+                    &&
+                    movement.purpose === "creditPayment"
+                    &&
+                    movement.completedDate
+            )
+            .sort(
+                (a, b) =>
+                    String(
+                        b.completedDate
+                    ).localeCompare(
+                        String(
+                            a.completedDate
+                        )
+                    )
+            );
+
+
+    const creditObligations =
+        obligations
+            .filter(
+                obligation =>
+                    String(
+                        obligation.creditId
+                    ) === creditId
+            )
+            .sort(
+                (a, b) =>
+                    String(
+                        a.dueDate
+                    ).localeCompare(
+                        String(
+                            b.dueDate
+                        )
+                    )
+            );
+
+
+    const nextObligation =
+        getNextPendingCreditObligation(
+            credit,
+            obligations
+        );
+
+
+    titleElement.textContent =
+        credit.name;
+
+
+    subtitleElement.textContent =
+        `${creditTypeLabel} · Corte día ${credit.closingDay} · Fecha límite día ${credit.paymentDueDay}`;
+
+
+    contentElement.innerHTML =
+        "";
+
+
+    const summary =
+        document.createElement(
+            "div"
+        );
+
+
+    summary.classList.add(
+        "credit-detail-summary"
+    );
+
+
+    const availableValue =
+        usage.available === null
+            ? "—"
+            : formatCurrency(
+                usage.available
+            );
+
+
+    const nextPaymentValue =
+        nextObligation
+            ? formatCurrency(
+                Number(
+                    nextObligation.pendingAmount
+                )
+            )
+            : "Sin pendiente";
+
+
+    summary.innerHTML = `
+        <div>
+            <span>Uso registrado</span>
+            <strong>${formatCurrency(usage.used)}</strong>
+        </div>
+        <div>
+            <span>Disponible estimado</span>
+            <strong class="${usage.available !== null && usage.available < 0 ? "credit-negative-value" : ""}">${availableValue}</strong>
+        </div>
+        <div>
+            <span>Límite</span>
+            <strong>${formatCurrency(Number(credit.creditLimit) || 0)}</strong>
+        </div>
+        <div>
+            <span>Próximo pendiente</span>
+            <strong>${nextPaymentValue}</strong>
+            ${nextObligation ? `<small>${formatShortDate(String(nextObligation.dueDate))}</small>` : ""}
+        </div>
+    `;
+
+
+    contentElement.appendChild(
+        summary
+    );
+
+
+    const note =
+        document.createElement(
+            "p"
+        );
+
+
+    note.classList.add(
+        "credit-detail-note"
+    );
+
+
+    note.textContent =
+        "Este detalle usa únicamente compras, pagos y obligaciones registradas en la app. No representa deuda previa, intereses ni planes externos.";
+
+
+    contentElement.appendChild(
+        note
+    );
+
+
+    const createSection = (
+        sectionTitle,
+        items,
+        renderItem,
+        emptyText
+    ) => {
+
+        const section =
+            document.createElement(
+                "section"
+            );
+
+
+        section.classList.add(
+            "credit-detail-section"
+        );
+
+
+        const heading =
+            document.createElement(
+                "div"
+            );
+
+
+        heading.classList.add(
+            "credit-detail-section-heading"
+        );
+
+
+        const headingTitle =
+            document.createElement(
+                "h3"
+            );
+
+
+        headingTitle.textContent =
+            sectionTitle;
+
+
+        const count =
+            document.createElement(
+                "span"
+            );
+
+
+        count.textContent =
+            String(
+                items.length
+            );
+
+
+        heading.append(
+            headingTitle,
+            count
+        );
+
+
+        section.appendChild(
+            heading
+        );
+
+
+        if (
+            items.length === 0
+        ) {
+
+            const empty =
+                document.createElement(
+                    "p"
+                );
+
+
+            empty.classList.add(
+                "credit-detail-empty"
+            );
+
+
+            empty.textContent =
+                emptyText;
+
+
+            section.appendChild(
+                empty
+            );
+
+        } else {
+
+            const list =
+                document.createElement(
+                    "div"
+                );
+
+
+            list.classList.add(
+                "credit-detail-list"
+            );
+
+
+            items.forEach(
+                item =>
+                    list.appendChild(
+                        renderItem(
+                            item
+                        )
+                    )
+            );
+
+
+            section.appendChild(
+                list
+            );
+
+        }
+
+
+        contentElement.appendChild(
+            section
+        );
+
+    };
+
+
+    const renderMovementItem = (
+        movement,
+        kind
+    ) => {
+
+        const row =
+            document.createElement(
+                "div"
+            );
+
+
+        row.classList.add(
+            "credit-detail-row"
+        );
+
+
+        const main =
+            document.createElement(
+                "div"
+            );
+
+
+        const description =
+            document.createElement(
+                "strong"
+            );
+
+
+        description.textContent =
+            movement.description ||
+            (kind === "payment"
+                ? "Pago a crédito"
+                : "Compra con crédito");
+
+
+        const meta =
+            document.createElement(
+                "span"
+            );
+
+
+        meta.textContent =
+            formatShortDate(
+                String(
+                    movement.completedDate
+                )
+            );
+
+
+        main.append(
+            description,
+            meta
+        );
+
+
+        const amount =
+            document.createElement(
+                "strong"
+            );
+
+
+        amount.classList.add(
+            kind === "payment"
+                ? "credit-detail-payment-amount"
+                : "credit-detail-purchase-amount"
+        );
+
+
+        amount.textContent =
+            `${kind === "payment" ? "−" : "+"}${formatCurrency(Number(movement.amount) || 0)}`;
+
+
+        row.append(
+            main,
+            amount
+        );
+
+
+        return row;
+
+    };
+
+
+    createSection(
+        "Compras registradas",
+        purchases,
+        movement =>
+            renderMovementItem(
+                movement,
+                "purchase"
+            ),
+        "No hay compras realizadas registradas para este crédito."
+    );
+
+
+    createSection(
+        "Pagos y abonos",
+        payments,
+        movement =>
+            renderMovementItem(
+                movement,
+                "payment"
+            ),
+        "No hay pagos o abonos registrados para este crédito."
+    );
+
+
+    createSection(
+        "Obligaciones por fecha límite",
+        creditObligations,
+        obligation => {
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+
+            row.classList.add(
+                "credit-detail-row",
+                "credit-detail-obligation-row"
+            );
+
+
+            const main =
+                document.createElement(
+                    "div"
+                );
+
+
+            const due =
+                document.createElement(
+                    "strong"
+                );
+
+
+            due.textContent =
+                formatShortDate(
+                    String(
+                        obligation.dueDate
+                    )
+                );
+
+
+            const paid =
+                document.createElement(
+                    "span"
+                );
+
+
+            paid.textContent =
+                `Original ${formatCurrency(Number(obligation.originalAmount) || 0)} · Pagado ${formatCurrency(Number(obligation.paidAmount) || 0)}`;
+
+
+            main.append(
+                due,
+                paid
+            );
+
+
+            const pending =
+                document.createElement(
+                    "strong"
+                );
+
+
+            const pendingAmount =
+                Math.max(
+                    0,
+                    Number(
+                        obligation.pendingAmount
+                    ) || 0
+                );
+
+
+            pending.textContent =
+                pendingAmount > 0.005
+                    ? formatCurrency(
+                        pendingAmount
+                    )
+                    : "Pagado";
+
+
+            if (
+                pendingAmount <= 0.005
+            ) {
+
+                pending.classList.add(
+                    "credit-detail-paid"
+                );
+
+            }
+
+
+            row.append(
+                main,
+                pending
+            );
+
+
+            return row;
+
+        },
+        "No hay obligaciones calculadas para este crédito."
+    );
+
+
+    modal.classList.remove(
+        "hidden"
+    );
+
+}
+
+
 async function loadCredits(
     creditSelector,
     creditPaymentSelector,
@@ -2378,6 +3819,47 @@ async function loadCredits(
         await getAllRecords(
             "credits"
         );
+
+
+    /*
+        Los datos de uso se calculan únicamente
+        con movimientos registrados en la app.
+        La gestión de deuda previa queda para V3.
+    */
+
+    const movements =
+        await getAllRecords(
+            "movements"
+        );
+
+
+    /*
+        Las obligaciones se calculan una sola vez
+        para toda la pantalla de créditos. Si algún
+        registro antiguo resultara inconsistente,
+        el panel sigue funcionando sin bloquear la app.
+    */
+
+    let creditObligations =
+        [];
+
+
+    try {
+
+        creditObligations =
+            calculateCreditObligations(
+                movements,
+                credits
+            );
+
+    } catch (error) {
+
+        console.error(
+            "No se pudieron calcular las obligaciones de crédito:",
+            error
+        );
+
+    }
 
 
     /*
@@ -2601,32 +4083,179 @@ async function loadCredits(
                 );
 
 
+                const creditTypeLabel =
+                    credit.type === "creditCard"
+                        ? "Tarjeta de crédito"
+                        : credit.type === "storeCredit"
+                            ? "Crédito de tienda"
+                            : "Otro crédito";
+
+
+                const usage =
+                    calculateRegisteredCreditUsage(
+                        credit,
+                        movements
+                    );
+
+
+                const nextObligation =
+                    getNextPendingCreditObligation(
+                        credit,
+                        creditObligations
+                    );
+
+
+                const today =
+                    getLocalDateString();
+
+
+                const obligationIsOverdue =
+                    nextObligation
+                    &&
+                    String(
+                        nextObligation.dueDate
+                    ) < today;
+
+
+                const availableClass =
+                    usage.available !== null
+                    &&
+                    usage.available < 0
+                        ? "credit-negative-value"
+                        : "";
+
+
+                const utilizationWidth =
+                    Math.min(
+                        100,
+                        Math.max(
+                            0,
+                            usage.utilization
+                        )
+                    );
+
+
+                const utilizationLabel =
+                    Number.isFinite(
+                        usage.utilization
+                    )
+                        ? `${usage.utilization.toFixed(0)}%`
+                        : "0%";
+
+
                 item.innerHTML = `
                     <div class="credit-list-header">
 
-                        <strong>
-                            ${credit.name}
-                        </strong>
+                        <div>
+                            <strong>
+                                ${credit.name}
+                            </strong>
+
+                            <span class="credit-type-label">
+                                ${creditTypeLabel}
+                            </span>
+                        </div>
 
                     </div>
 
-                    <div class="credit-list-data">
+                    <div class="credit-usage-summary">
 
-                        <div>
-                            Límite:
-                            ${formatCurrency(
-                                credit.creditLimit
-                            )}
+                        <div class="credit-usage-values">
+
+                            <div>
+                                <span>Uso registrado</span>
+                                <strong>
+                                    ${formatCurrency(
+                                        usage.used
+                                    )}
+                                </strong>
+                            </div>
+
+                            <div>
+                                <span>Disponible estimado</span>
+                                <strong class="${availableClass}">
+                                    ${usage.available === null
+                                        ? "—"
+                                        : formatCurrency(
+                                            usage.available
+                                        )}
+                                </strong>
+                            </div>
+
                         </div>
 
-                        <div>
-                            Corte:
-                            día ${credit.closingDay}
+                        <div class="credit-utilization-row">
+                            <div class="credit-utilization-track"
+                                 aria-label="Uso registrado del límite">
+                                <div class="credit-utilization-fill"
+                                     style="width: ${utilizationWidth}%"></div>
+                            </div>
+
+                            <span>${utilizationLabel}</span>
                         </div>
 
-                        <div>
-                            FLP:
-                            día ${credit.paymentDueDay}
+                        <small>
+                            Estimación basada sólo en compras y pagos registrados en esta app.
+                        </small>
+
+                    </div>
+
+                    <div class="credit-next-payment ${obligationIsOverdue ? "credit-next-payment-overdue" : ""}">
+                        ${nextObligation
+                            ? `
+                                <div>
+                                    <span>
+                                        ${obligationIsOverdue
+                                            ? "Pago vencido"
+                                            : "Próximo pago"}
+                                    </span>
+                                    <strong>
+                                        ${formatCurrency(
+                                            Number(
+                                                nextObligation.pendingAmount
+                                            )
+                                        )}
+                                    </strong>
+                                </div>
+                                <small>
+                                    Fecha límite: ${formatShortDate(
+                                        String(
+                                            nextObligation.dueDate
+                                        )
+                                    )}
+                                </small>
+                            `
+                            : `
+                                <div>
+                                    <span>Próximo pago</span>
+                                    <strong>Sin pagos pendientes registrados</strong>
+                                </div>
+                            `}
+                    </div>
+
+                    <div class="credit-list-data credit-list-data-grid">
+
+                        <div class="credit-data-block">
+                            <span>Límite</span>
+                            <strong>
+                                ${formatCurrency(
+                                    credit.creditLimit
+                                )}
+                            </strong>
+                        </div>
+
+                        <div class="credit-data-block">
+                            <span>Corte</span>
+                            <strong>
+                                Día ${credit.closingDay}
+                            </strong>
+                        </div>
+
+                        <div class="credit-data-block">
+                            <span>Fecha límite</span>
+                            <strong>
+                                Día ${credit.paymentDueDay}
+                            </strong>
                         </div>
 
                     </div>
@@ -2642,6 +4271,25 @@ async function loadCredits(
                 actions.classList.add(
                     "credit-list-actions"
                 );
+
+
+                const detailButton =
+                    document.createElement(
+                        "button"
+                    );
+
+
+                detailButton.type =
+                    "button";
+
+
+                detailButton.classList.add(
+                    "secondary-button"
+                );
+
+
+                detailButton.textContent =
+                    "Ver detalle";
 
 
                 const editButton =
@@ -2680,6 +4328,28 @@ async function loadCredits(
 
                 deactivateButton.textContent =
                     "Cancelar crédito";
+
+
+                /*
+                    VER DETALLE
+                */
+
+                detailButton.addEventListener(
+                    "click",
+                    () => {
+
+                        renderCreditDetail(
+                            credit,
+                            movements,
+                            creditObligations,
+                            creditDetailModal,
+                            creditDetailTitle,
+                            creditDetailSubtitle,
+                            creditDetailContent
+                        );
+
+                    }
+                );
 
 
                 /*
@@ -2849,6 +4519,11 @@ async function loadCredits(
                         }
 
                     }
+                );
+
+
+                actions.appendChild(
+                    detailButton
                 );
 
 

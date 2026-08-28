@@ -295,8 +295,12 @@ export function calculateCreditObligations(
             const credit =
                 credits.find(
                     item =>
-                        item.id ===
-                        movement.creditId
+                        String(
+                            item.id
+                        ) ===
+                        String(
+                            movement.creditId
+                        )
                 );
 
 
@@ -401,10 +405,13 @@ export function calculateCreditObligations(
                 b.creditId
             ) {
 
-                return a.creditId
-                    .localeCompare(
+                return String(
+                    a.creditId
+                ).localeCompare(
+                    String(
                         b.creditId
-                    );
+                    )
+                );
 
             }
 
@@ -486,8 +493,12 @@ export function calculateCreditObligations(
             const creditObligations =
                 obligationList.filter(
                     obligation =>
-                        obligation.creditId ===
-                        payment.creditId
+                        String(
+                            obligation.creditId
+                        ) ===
+                        String(
+                            payment.creditId
+                        )
                 );
 
 

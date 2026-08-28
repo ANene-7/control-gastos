@@ -1,14 +1,25 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <!-- ControlGastos V2.0.8a -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#ffffff">
+    <meta name="theme-color" content="#ffffff" id="themeColorMeta">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Gastos">
 
     <title>Control de Gastos</title>
+
+    <script>
+        (() => {
+            const stored = localStorage.getItem("cg-theme-preference") || "system";
+            const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+            const resolved = stored === "system" ? (prefersDark ? "dark" : "light") : stored;
+            document.documentElement.dataset.theme = resolved;
+            document.documentElement.dataset.themePreference = stored;
+        })();
+    </script>
 
     <link rel="icon" type="image/png" href="assets/icons/icon-512.png">
     <link rel="stylesheet" href="css/styles.css">
@@ -504,6 +515,35 @@
                 
                 <div class="form-group">
 
+                    <label for="movementCategory">
+                        Categoría
+                    </label>
+
+                    <select id="movementCategory">
+                        <option value="">Sin categoría</option>
+                        <option value="Nómina">Nómina</option>
+                        <option value="Alimentación">Alimentación</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Vivienda">Vivienda</option>
+                        <option value="Servicios">Servicios</option>
+                        <option value="Salud">Salud</option>
+                        <option value="Educación">Educación</option>
+                        <option value="Entretenimiento">Entretenimiento</option>
+                        <option value="Compras">Compras</option>
+                        <option value="Deudas / créditos">Deudas / créditos</option>
+                        <option value="Ahorro">Ahorro</option>
+                        <option value="Otros">Otros</option>
+                    </select>
+
+                    <small class="field-help">
+                        La categoría da significado al punto de color. Puedes ajustar el color manualmente debajo.
+                    </small>
+
+                </div>
+
+
+                <div class="form-group">
+
                     <label for="movementNotes">
                         Notas
                     </label>
@@ -697,8 +737,22 @@
 
             <h2>Configuración</h2>
 
+            <button
+                type="button"
+                id="closeSettingsModalButton"
+                class="close-button"
+                aria-label="Cerrar configuración">
+                ×
+            </button>
+
         </div>
 
+        <details class="settings-collapsible" open>
+            <summary>
+                <span>Saldo inicial</span>
+                <small>Punto de partida para los cálculos</small>
+            </summary>
+            <div class="settings-collapsible-content">
 
         <form id="settingsForm">
 
@@ -755,14 +809,18 @@
 
         </form>
 
-        <section class="settings-section payroll-settings-section">
-
-            <div class="settings-section-header">
-                <div>
-                    <h3>Nómina</h3>
-                    <p>Configura ingresos de nómina semanales, bisemanales, quincenales o mensuales y cómo se ajustan cuando la fecha de pago cae en fin de semana.</p>
-                </div>
             </div>
+        </details>
+
+        <section class="settings-section payroll-settings-section">
+            <details class="settings-collapsible">
+                <summary>
+                    <span>Nómina</span>
+                    <small>Frecuencia y reglas de pago</small>
+                </summary>
+                <div class="settings-collapsible-content">
+
+            <p class="settings-collapsible-intro">Configura ingresos de nómina semanales, bisemanales, quincenales o mensuales y cómo se ajustan cuando la fecha de pago cae en fin de semana.</p>
 
             <form id="payrollForm" class="payroll-form">
 
@@ -836,16 +894,19 @@
 
             <div id="payrollList" class="payroll-list"></div>
 
+                </div>
+            </details>
         </section>
 
         <section class="settings-section fixed-movements-section">
+            <details class="settings-collapsible">
+                <summary>
+                    <span>Ingresos y egresos fijos</span>
+                    <small>Movimientos recurrentes</small>
+                </summary>
+                <div class="settings-collapsible-content">
 
-            <div class="settings-section-header">
-                <div>
-                    <h3>Ingresos y egresos fijos</h3>
-                    <p>Registra movimientos recurrentes que normalmente se repiten con el mismo monto y frecuencia. Se proyectan como programados hasta que los marques como realizados.</p>
-                </div>
-            </div>
+            <p class="settings-collapsible-intro">Registra movimientos recurrentes que normalmente se repiten con el mismo monto y frecuencia. Se proyectan como programados hasta que los marques como realizados.</p>
 
             <form id="fixedMovementForm" class="payroll-form">
 
@@ -867,6 +928,24 @@
                 </div>
 
                 <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="fixedMovementCategory">Categoría</label>
+                        <select id="fixedMovementCategory">
+                            <option value="">Sin categoría</option>
+                            <option value="Alimentación">Alimentación</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Vivienda">Vivienda</option>
+                            <option value="Servicios">Servicios</option>
+                            <option value="Salud">Salud</option>
+                            <option value="Educación">Educación</option>
+                            <option value="Entretenimiento">Entretenimiento</option>
+                            <option value="Compras">Compras</option>
+                            <option value="Deudas / créditos">Deudas / créditos</option>
+                            <option value="Ahorro">Ahorro</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+
                     <div class="form-group">
                         <label for="fixedMovementAmount">Monto</label>
                         <input type="number" id="fixedMovementAmount" min="0" step="0.01" placeholder="0.00" required>
@@ -912,57 +991,247 @@
 
             <div id="fixedMovementList" class="payroll-list"></div>
 
+                </div>
+            </details>
         </section>
 
-        <div class="backup-section">
+        <section class="settings-section appearance-settings-section">
+            <details class="settings-collapsible">
+                <summary>
+                    <span>Apariencia</span>
+                    <small>Tema visual de la aplicación</small>
+                </summary>
+                <div class="settings-collapsible-content">
 
-            <h3>
-                Respaldo de datos
-            </h3>
+                    <div class="settings-section-heading">
+                        <div>
+                            <h3>Apariencia</h3>
+                            <p>Elige cómo quieres ver la app en este dispositivo. El modo del sistema sigue automáticamente la configuración de tu navegador o sistema operativo.</p>
+                        </div>
+                    </div>
 
+                    <div class="appearance-theme-card">
+                        <div>
+                            <strong>Tema</strong>
+                            <small>Este ajuste sólo cambia la apariencia. No modifica tus datos ni tus cálculos.</small>
+                        </div>
+                        <select id="appearanceThemeSelect" aria-label="Tema de apariencia">
+                            <option value="system">Usar tema del sistema</option>
+                            <option value="light">Claro</option>
+                            <option value="dark">Oscuro</option>
+                        </select>
+                    </div>
 
-            <p>
-                Exporta una copia de tus movimientos,
-                créditos y configuración.
-            </p>
+                    <div class="appearance-preview" aria-hidden="true">
+                        <div class="appearance-preview-card">
+                            <span>Vista previa</span>
+                            <strong>$12,480.35</strong>
+                            <small>Saldo actual</small>
+                        </div>
+                        <div class="appearance-preview-row">
+                            <span class="appearance-preview-dot"></span>
+                            <div>
+                                <strong>Internet</strong>
+                                <small>Servicios · -$599.00</small>
+                            </div>
+                        </div>
+                    </div>
 
+                </div>
+            </details>
+        </section>
 
-            <div class="form-actions">
+        <section class="settings-section sync-settings-section">
+            <details class="settings-collapsible">
+                <summary>
+                    <span>Sincronización entre dispositivos</span>
+                    <small>Base local para sincronización futura</small>
+                </summary>
+                <div class="settings-collapsible-content">
 
-                <button
-                    type="button"
-                    id="exportBackupButton"
-                    class="secondary-button">
+            <div class="settings-section-heading">
+                <div>
+                    <h3>Sincronización entre dispositivos</h3>
+                    <p>Esta versión prepara la base local para sincronizar tus datos en una etapa posterior. Por ahora no se envía información a ningún servidor ni se requiere una cuenta.</p>
+                </div>
 
-                    Exportar respaldo
+                <span
+                    id="syncStatusBadge"
+                    class="sync-status-badge">
+                    Preparando…
+                </span>
+            </div>
 
-                </button>
+            <div class="sync-foundation-grid">
 
+                <div class="sync-foundation-card">
+                    <span class="sync-foundation-label">Modo actual</span>
+                    <strong>Almacenamiento local</strong>
+                    <small>IndexedDB sigue siendo la fuente principal de datos en este dispositivo.</small>
+                </div>
 
-                <button
-                    type="button"
-                    id="importBackupButton"
-                    class="secondary-button">
+                <div class="sync-foundation-card">
+                    <span class="sync-foundation-label">Cambios locales registrados</span>
+                    <strong id="syncPendingCount">0</strong>
+                    <small>La app conserva una cola técnica de cambios preparada para una futura sincronización.</small>
+                </div>
 
-                    Importar respaldo
-
-                </button>
+                <div class="sync-foundation-card">
+                    <span class="sync-foundation-label">Último cambio local</span>
+                    <strong id="syncLastChange">—</strong>
+                    <small>Este dato sirve como referencia para resolver sincronizaciones posteriormente.</small>
+                </div>
 
             </div>
 
+            <div class="sync-foundation-note">
+                <strong>Importante:</strong> esta etapa no activa sincronización en la nube. Tus datos continúan guardándose únicamente en este dispositivo.
+            </div>
 
-            <!--
-                Input oculto utilizado para
-                seleccionar el archivo JSON.
-            -->
+                </div>
+            </details>
+        </section>
 
-            <input
-                type="file"
-                id="backupFileInput"
-                accept=".json,application/json"
-                hidden>
 
-        </div>
+        <section class="settings-section notification-settings-section">
+            <details class="settings-collapsible">
+                <summary>
+                    <span>Notificaciones</span>
+                    <small>Recordatorios de movimientos y pagos</small>
+                </summary>
+
+                <div class="settings-collapsible-content">
+
+                    <div class="settings-section-heading">
+                        <div>
+                            <h3>Notificaciones PWA</h3>
+                            <p>Recibe avisos de movimientos programados y pagos de crédito próximos. En esta etapa la app revisa los recordatorios cuando está abierta o cuando vuelve al primer plano.</p>
+                        </div>
+
+                        <span id="notificationStatusBadge" class="sync-status-badge">
+                            Consultando…
+                        </span>
+                    </div>
+
+                    <div class="notification-settings-panel">
+
+                        <label class="notification-toggle-row">
+                            <span>
+                                <strong>Recordatorios en este dispositivo</strong>
+                                <small>Activa o desactiva los avisos sin eliminar tus preferencias.</small>
+                            </span>
+                            <input type="checkbox" id="notificationsEnabled">
+                        </label>
+
+                        <label class="notification-toggle-row">
+                            <span>
+                                <strong>Movimientos programados</strong>
+                                <small>Nómina, ingresos y egresos que estén próximos.</small>
+                            </span>
+                            <input type="checkbox" id="notifyScheduledMovements">
+                        </label>
+
+                        <label class="notification-toggle-row">
+                            <span>
+                                <strong>Pagos de crédito</strong>
+                                <small>Obligaciones pendientes cuya fecha límite esté próxima.</small>
+                            </span>
+                            <input type="checkbox" id="notifyCreditPayments">
+                        </label>
+
+                        <label class="notification-reminder-row" for="notificationReminderDays">
+                            <span>
+                                <strong>Avisar con anticipación</strong>
+                                <small>El mismo margen se aplica a los recordatorios activados.</small>
+                            </span>
+                            <select id="notificationReminderDays">
+                                <option value="0">El mismo día</option>
+                                <option value="1">1 día antes</option>
+                                <option value="3">3 días antes</option>
+                                <option value="7">7 días antes</option>
+                            </select>
+                        </label>
+
+                    </div>
+
+                    <div class="form-actions notification-actions">
+                        <button type="button" id="requestNotificationPermissionButton" class="secondary-button">
+                            Activar permiso
+                        </button>
+                        <button type="button" id="testNotificationButton" class="secondary-button">
+                            Probar notificación
+                        </button>
+                        <button type="button" id="saveNotificationSettingsButton" class="primary-button">
+                            Guardar preferencias
+                        </button>
+                    </div>
+
+                    <div class="sync-foundation-note notification-limit-note">
+                        <strong>Por ahora:</strong> estos avisos se comprueban al abrir la app o regresar a ella. Las notificaciones totalmente en segundo plano requerirán la futura sincronización mediante servidor y push.
+                    </div>
+
+                </div>
+            </details>
+        </section>
+
+
+        <section class="settings-section data-settings-section">
+
+            <details class="data-settings-details">
+
+                <summary>
+                    <span>Datos y respaldo</span>
+                    <small>Exportar, restaurar o reiniciar la app</small>
+                </summary>
+
+                <div class="data-settings-content">
+
+                    <div class="data-settings-block">
+                        <h3>Respaldo de datos</h3>
+                        <p>Guarda una copia completa de tu configuración, movimientos, créditos, recurrencias y ajustes de crédito. Es recomendable crear un respaldo antes de importar información o reiniciar la app.</p>
+
+                        <div class="form-actions data-actions">
+                            <button
+                                type="button"
+                                id="exportBackupButton"
+                                class="secondary-button">
+                                Exportar respaldo
+                            </button>
+
+                            <button
+                                type="button"
+                                id="importBackupButton"
+                                class="secondary-button">
+                                Importar respaldo
+                            </button>
+                        </div>
+
+                        <input
+                            type="file"
+                            id="backupFileInput"
+                            accept=".json,application/json"
+                            hidden>
+                    </div>
+
+                    <div class="data-settings-block danger-zone">
+                        <div>
+                            <h3>Restaurar app</h3>
+                            <p>Elimina toda la información guardada en este dispositivo y devuelve la app al estado inicial. Esta acción no se puede deshacer. Exporta un respaldo antes si quieres conservar tus datos.</p>
+                        </div>
+
+                        <button
+                            type="button"
+                            id="resetAppButton"
+                            class="danger-button">
+                            Borrar toda la información
+                        </button>
+                    </div>
+
+                </div>
+
+            </details>
+
+        </section>
 
     </div>
 
@@ -977,7 +1246,7 @@
 
         <div class="modal-header">
 
-            <h2>Créditos</h2>
+            <h2>Gestión de créditos</h2>
 
             <button
                 id="closeCreditsModalButton"
@@ -987,6 +1256,13 @@
             </button>
 
         </div>
+
+
+        <p class="credits-modal-intro">
+            Administra tus créditos activos, sus límites y sus fechas clave.
+            En esta primera etapa mantenemos intacta la lógica financiera existente
+            y mejoramos la organización de la información.
+        </p>
 
 
         <form id="creditForm">
@@ -1144,6 +1420,35 @@
 
 </div>
 
+<!-- Modal de detalle de crédito -->
+<div
+    id="creditDetailModal"
+    class="modal hidden">
+
+    <div class="modal-content credit-detail-modal-content">
+
+        <div class="modal-header">
+
+            <div>
+                <h2 id="creditDetailTitle">Detalle de crédito</h2>
+                <p id="creditDetailSubtitle" class="credit-detail-header-subtitle"></p>
+            </div>
+
+            <button
+                id="closeCreditDetailModalButton"
+                class="close-button"
+                aria-label="Cerrar">
+                ×
+            </button>
+
+        </div>
+
+        <div id="creditDetailContent"></div>
+
+    </div>
+
+</div>
+
 <!-- Modal de movimiento programado -->
 
 <div
@@ -1237,6 +1542,16 @@
 
             <button
                 type="button"
+                id="editScheduledMovementButton"
+                class="secondary-button">
+
+                Editar
+
+            </button>
+
+
+            <button
+                type="button"
                 id="cancelScheduledMovementButton"
                 class="secondary-button">
 
@@ -1317,7 +1632,7 @@
 
         <div class="modal-header">
 
-            <h2>Editar movimiento</h2>
+            <h2 id="editMovementTitle">Editar movimiento</h2>
 
             <button
                 id="closeEditMovementModalButton"
@@ -1442,7 +1757,45 @@
 
             <div class="form-group">
 
-                <label for="editMovementDate">
+                <label for="editMovementCategory">
+                    Categoría
+                </label>
+
+                <select id="editMovementCategory">
+                    <option value="">Sin categoría</option>
+                    <option value="Nómina">Nómina</option>
+                    <option value="Alimentación">Alimentación</option>
+                    <option value="Transporte">Transporte</option>
+                    <option value="Vivienda">Vivienda</option>
+                    <option value="Servicios">Servicios</option>
+                    <option value="Salud">Salud</option>
+                    <option value="Educación">Educación</option>
+                    <option value="Entretenimiento">Entretenimiento</option>
+                    <option value="Compras">Compras</option>
+                    <option value="Deudas / créditos">Deudas / créditos</option>
+                    <option value="Ahorro">Ahorro</option>
+                    <option value="Otros">Otros</option>
+                </select>
+
+            </div>
+
+            <div class="form-group">
+                <label>Etiqueta</label>
+                <div class="color-options">
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="blue"><span class="color-dot color-blue"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="green"><span class="color-dot color-green"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="yellow"><span class="color-dot color-yellow"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="red"><span class="color-dot color-red"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="purple"><span class="color-dot color-purple"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="gray"><span class="color-dot color-gray"></span></label>
+                </div>
+            </div>
+
+            <div class="form-group">
+
+                <label
+                    for="editMovementDate"
+                    id="editMovementDateLabel">
                     Fecha realizada
                 </label>
 
@@ -1614,6 +1967,68 @@
                 aria-label="Cerrar">
                 ×
             </button>
+
+        </div>
+
+
+        <div class="monthly-movements-toolbar">
+
+            <label class="monthly-movements-search">
+                <span>Buscar</span>
+                <input
+                    type="search"
+                    id="monthlyMovementsSearch"
+                    placeholder="Concepto, categoría, nota o crédito">
+            </label>
+
+            <div class="monthly-movements-filters">
+
+                <label>
+                    <span>Estado</span>
+                    <select id="monthlyMovementsStatusFilter">
+                        <option value="all">Todos</option>
+                        <option value="completed">Realizados</option>
+                        <option value="scheduled">Programados</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Tipo</span>
+                    <select id="monthlyMovementsTypeFilter">
+                        <option value="all">Todos</option>
+                        <option value="income">Ingresos</option>
+                        <option value="expense">Egresos</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Categoría</span>
+                    <select id="monthlyMovementsCategoryFilter">
+                        <option value="all">Todas</option>
+                    </select>
+                </label>
+
+                <label>
+                    <span>Método</span>
+                    <select id="monthlyMovementsPaymentFilter">
+                        <option value="all">Todos</option>
+                        <option value="cash">Efectivo</option>
+                        <option value="debit">Débito</option>
+                        <option value="credit">Crédito</option>
+                    </select>
+                </label>
+
+            </div>
+
+            <div class="monthly-movements-toolbar-footer">
+                <span id="monthlyMovementsResultCount">0 movimientos</span>
+                <button
+                    type="button"
+                    id="clearMonthlyMovementsFilters"
+                    class="text-button">
+                    Limpiar filtros
+                </button>
+            </div>
 
         </div>
 

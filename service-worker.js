@@ -1,4 +1,4 @@
-const CACHE_NAME = "control-gastos-v16";
+const CACHE_NAME = "control-gastos-v17";
 
 
 const APP_FILES = [
@@ -20,7 +20,8 @@ const APP_FILES = [
     "./js/calendar.js",
     "./js/calculations.js",
     "./js/creditCalculations.js",
-    "./js/scheduledCalculations.js"
+    "./js/scheduledCalculations.js",
+    "./js/notifications.js"
     
 
 ];
@@ -38,6 +39,8 @@ const APP_FILES = [
 self.addEventListener(
     "install",
     event => {
+
+        self.skipWaiting();
 
         event.waitUntil(
 
@@ -69,6 +72,8 @@ self.addEventListener(
 self.addEventListener(
     "activate",
     event => {
+
+        self.clients.claim();
 
         event.waitUntil(
 
@@ -153,6 +158,53 @@ self.addEventListener(
                     }
                 )
 
+        );
+
+    }
+);
+
+/*
+    =================================
+    NOTIFICACIONES
+    =================================
+
+    Al pulsar una notificación, intentar
+    enfocar la app existente. Si no hay
+    ninguna ventana abierta, abrirla.
+*/
+self.addEventListener(
+    "notificationclick",
+    event => {
+
+        event.notification.close();
+
+        const targetUrl =
+            event.notification.data?.url ||
+            "./";
+
+        event.waitUntil(
+            clients
+                .matchAll({
+                    type: "window",
+                    includeUncontrolled: true
+                })
+                .then(windowClients => {
+
+                    for (const client of windowClients) {
+
+                        if ("focus" in client) {
+                            return client.focus();
+                        }
+
+                    }
+
+                    if (clients.openWindow) {
+                        return clients.openWindow(targetUrl);
+                    }
+
+                    return undefined;
+
+                })
         );
 
     }

@@ -34,6 +34,46 @@ import {
     getScheduledMovementsForDate
 } from "./scheduledCalculations.js";
 
+import {
+    checkDueNotifications
+} from "./notifications.js";
+
+
+function getCategorySuggestedColor(category) {
+    const colors = {
+        "Nómina": "green",
+        "Alimentación": "yellow",
+        "Transporte": "blue",
+        "Vivienda": "purple",
+        "Servicios": "blue",
+        "Salud": "red",
+        "Educación": "purple",
+        "Entretenimiento": "yellow",
+        "Compras": "red",
+        "Deudas / créditos": "red",
+        "Ahorro": "green",
+        "Otros": "gray"
+    };
+
+    return colors[category] || null;
+}
+
+function applySuggestedColor(category, radioName) {
+    const color = getCategorySuggestedColor(category);
+
+    if (!color) {
+        return;
+    }
+
+    const radio = document.querySelector(
+        `input[name="${radioName}"][value="${color}"]`
+    );
+
+    if (radio) {
+        radio.checked = true;
+    }
+}
+
 function generateMovementId() {
 
     return (
@@ -114,6 +154,20 @@ function initializeMovementForm() {
         document.getElementById(
             "movementIsRecurring"
         );
+
+
+    const movementCategory =
+        document.getElementById(
+            "movementCategory"
+        );
+
+    movementCategory?.addEventListener(
+        "change",
+        () => applySuggestedColor(
+            movementCategory.value,
+            "movementLabelColor"
+        )
+    );
 
 
     const creditPaymentSelectorContainer =
@@ -614,6 +668,12 @@ async function saveMovement() {
         ).value.trim();
 
 
+    const category =
+        document.getElementById(
+            "movementCategory"
+        )?.value || "";
+
+
     const status =
         document.getElementById(
             "movementIsScheduled"
@@ -830,6 +890,9 @@ async function saveMovement() {
             recurrenceData,
 
 
+        category,
+
+
         labelColor,
 
 
@@ -886,6 +949,12 @@ function initializeScheduledMovementModal() {
     const deleteButton =
         document.getElementById(
             "deleteScheduledMovementButton"
+        );
+
+
+    const editButton =
+        document.getElementById(
+            "editScheduledMovementButton"
         );
 
 
@@ -958,6 +1027,54 @@ function initializeScheduledMovementModal() {
     cancelButton.addEventListener(
         "click",
         closeModal
+    );
+
+
+    /*
+        Editar la regla programada.
+
+        Si el movimiento es recurrente, la edición
+        modifica la regla base y, por tanto, sus
+        ocurrencias futuras. Los movimientos que ya
+        fueron marcados como realizados conservan su
+        información histórica.
+    */
+
+    editButton.addEventListener(
+        "click",
+        () => {
+
+            if (!selectedMovement) {
+
+                showNotification(
+                    "No hay un movimiento seleccionado.",
+                    "error"
+                );
+
+                return;
+
+            }
+
+
+            const movementId =
+                selectedMovement.id;
+
+
+            closeModal();
+
+
+            window.dispatchEvent(
+                new CustomEvent(
+                    "openScheduledMovementForEdit",
+                    {
+                        detail: {
+                            movementId
+                        }
+                    }
+                )
+            );
+
+        }
     );
 
 
@@ -1202,7 +1319,7 @@ function initializeScheduledMovementModal() {
                     completedDateInput.value;
 
 
-                if (!completedDate) {
+                if (!movementDateValue) {
 
                     throw new Error(
                         "Debes indicar la fecha realizada."
@@ -2195,6 +2312,18 @@ function initializeEditMovementModal() {
         );
 
 
+    const titleElement =
+        document.getElementById(
+            "editMovementTitle"
+        );
+
+
+    const dateLabel =
+        document.getElementById(
+            "editMovementDateLabel"
+        );
+
+
     const closeButton =
         document.getElementById(
             "closeEditMovementModalButton"
@@ -2276,6 +2405,20 @@ function initializeEditMovementModal() {
         document.getElementById(
             "editMovementNotes"
         );
+
+
+    const categoryInput =
+        document.getElementById(
+            "editMovementCategory"
+        );
+
+    categoryInput?.addEventListener(
+        "change",
+        () => applySuggestedColor(
+            categoryInput.value,
+            "editMovementLabelColor"
+        )
+    );
 
 
     /*
@@ -2642,6 +2785,132 @@ function initializeEditMovementModal() {
 
 
     /*
+        Cargar un movimiento en el formulario
+        de edición, sea realizado o programado.
+    */
+
+    async function openMovementForEdit(
+        movementId,
+        expectedStatus
+    ) {
+
+        selectedMovement =
+            await getRecord(
+                "movements",
+                movementId
+            );
+
+
+        if (!selectedMovement) {
+
+            throw new Error(
+                "No se encontró el movimiento."
+            );
+
+        }
+
+
+        if (
+            selectedMovement.status !==
+                expectedStatus
+        ) {
+
+            throw new Error(
+                expectedStatus === "scheduled"
+                    ? "El movimiento seleccionado no está programado."
+                    : "El movimiento seleccionado no está realizado."
+            );
+
+        }
+
+
+        await loadCreditOptions();
+
+
+        descriptionInput.value =
+            selectedMovement.description;
+
+
+        amountInput.value =
+            selectedMovement.amount;
+
+
+        isIncome.checked =
+            selectedMovement.type ===
+            "income";
+
+
+        isCreditPayment.checked =
+            selectedMovement.purpose ===
+            "creditPayment";
+
+
+        paymentMethod.value =
+            selectedMovement.paymentMethod;
+
+
+        dateInput.value =
+            expectedStatus === "scheduled"
+                ? selectedMovement.scheduledDate
+                : selectedMovement.completedDate;
+
+
+        notesInput.value =
+            selectedMovement.notes ||
+            "";
+
+
+        categoryInput.value =
+            selectedMovement.category ||
+            "";
+
+        const currentColor =
+            selectedMovement.labelColor ||
+            "gray";
+
+        const currentColorRadio =
+            document.querySelector(
+                `input[name="editMovementLabelColor"][value="${currentColor}"]`
+            );
+
+        if (currentColorRadio) {
+            currentColorRadio.checked = true;
+        }
+
+
+        creditSelector.value =
+            selectedMovement.creditId ||
+            "";
+
+
+        creditPaymentSelector.value =
+            selectedMovement.creditId ||
+            "";
+
+
+        titleElement.textContent =
+            expectedStatus === "scheduled"
+                ? "Editar movimiento programado"
+                : "Editar movimiento";
+
+
+        dateLabel.textContent =
+            expectedStatus === "scheduled"
+                ? "Fecha programada"
+                : "Fecha realizada";
+
+
+        updateConditionalFields();
+
+
+        modal.classList.remove(
+            "hidden"
+        );
+
+    }
+
+
+    /*
         Abrir movimiento realizado.
     */
 
@@ -2651,96 +2920,10 @@ function initializeEditMovementModal() {
 
             try {
 
-                const {
-                    movementId
-                } =
-                    event.detail;
-
-
-                selectedMovement =
-                    await getRecord(
-                        "movements",
-                        movementId
-                    );
-
-
-                if (!selectedMovement) {
-
-                    throw new Error(
-                        "No se encontró el movimiento."
-                    );
-
-                }
-
-
-                if (
-                    selectedMovement.status !==
-                        "completed"
-                ) {
-
-                    throw new Error(
-                        "El movimiento seleccionado no está realizado."
-                    );
-
-                }
-
-
-                await loadCreditOptions();
-
-
-                descriptionInput.value =
-                    selectedMovement.description;
-
-
-                amountInput.value =
-                    selectedMovement.amount;
-
-
-                isIncome.checked =
-                    selectedMovement.type ===
-                    "income";
-
-
-                isCreditPayment.checked =
-                    selectedMovement.purpose ===
-                    "creditPayment";
-
-
-                paymentMethod.value =
-                    selectedMovement.paymentMethod;
-
-
-                dateInput.value =
-                    selectedMovement.completedDate;
-
-
-                notesInput.value =
-                    selectedMovement.notes ||
-                    "";
-
-
-                /*
-                    Seleccionar crédito actual,
-                    cuando exista.
-                */
-
-                creditSelector.value =
-                    selectedMovement.creditId ||
-                    "";
-
-
-                creditPaymentSelector.value =
-                    selectedMovement.creditId ||
-                    "";
-
-
-                updateConditionalFields();
-
-
-                modal.classList.remove(
-                    "hidden"
+                await openMovementForEdit(
+                    event.detail.movementId,
+                    "completed"
                 );
-
 
             } catch (error) {
 
@@ -2753,6 +2936,42 @@ function initializeEditMovementModal() {
                 showNotification(
                     error.message ||
                     "No se pudo abrir el movimiento.",
+                    "error"
+                );
+
+            }
+
+        }
+    );
+
+
+    /*
+        Abrir movimiento programado para editar
+        su regla base.
+    */
+
+    window.addEventListener(
+        "openScheduledMovementForEdit",
+        async event => {
+
+            try {
+
+                await openMovementForEdit(
+                    event.detail.movementId,
+                    "scheduled"
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo abrir el movimiento programado para edición:",
+                    error
+                );
+
+
+                showNotification(
+                    error.message ||
+                    "No se pudo abrir el movimiento programado.",
                     "error"
                 );
 
@@ -2796,7 +3015,7 @@ function initializeEditMovementModal() {
                     );
 
 
-                const completedDate =
+                const movementDateValue =
                     dateInput.value;
 
 
@@ -2814,6 +3033,18 @@ function initializeEditMovementModal() {
 
                 const method =
                     paymentMethod.value;
+
+
+                const category =
+                    categoryInput?.value ||
+                    "";
+
+                const labelColor =
+                    document.querySelector(
+                        'input[name="editMovementLabelColor"]:checked'
+                    )?.value ||
+                    selectedMovement.labelColor ||
+                    "gray";
 
 
                 if (!description) {
@@ -2943,7 +3174,24 @@ function initializeEditMovementModal() {
                     creditId,
 
 
-                    completedDate,
+                    scheduledDate:
+                        selectedMovement.status ===
+                            "scheduled"
+                            ? movementDateValue
+                            : null,
+
+
+                    completedDate:
+                        selectedMovement.status ===
+                            "completed"
+                            ? movementDateValue
+                            : null,
+
+
+                    category,
+
+
+                    labelColor,
 
 
                     notes:
@@ -2969,7 +3217,9 @@ function initializeEditMovementModal() {
 
 
                 showNotification(
-                    "Movimiento actualizado correctamente."
+                    selectedMovement.status === "scheduled"
+                        ? "Movimiento programado actualizado correctamente."
+                        : "Movimiento actualizado correctamente."
                 );
 
 
@@ -3912,6 +4162,51 @@ function initializeMonthlyMovementsModal() {
         );
 
 
+    const searchInput =
+        document.getElementById(
+            "monthlyMovementsSearch"
+        );
+
+
+    const statusFilter =
+        document.getElementById(
+            "monthlyMovementsStatusFilter"
+        );
+
+
+    const typeFilter =
+        document.getElementById(
+            "monthlyMovementsTypeFilter"
+        );
+
+
+    const categoryFilter =
+        document.getElementById(
+            "monthlyMovementsCategoryFilter"
+        );
+
+
+    const paymentFilter =
+        document.getElementById(
+            "monthlyMovementsPaymentFilter"
+        );
+
+
+    const clearFiltersButton =
+        document.getElementById(
+            "clearMonthlyMovementsFilters"
+        );
+
+
+    const resultCount =
+        document.getElementById(
+            "monthlyMovementsResultCount"
+        );
+
+
+    let loadedEntries = [];
+
+
     const monthNames = [
 
         "Enero",
@@ -4076,6 +4371,13 @@ function initializeMonthlyMovementsModal() {
 
         const details =
             [];
+
+
+        if (movement.category) {
+            details.push(
+                movement.category
+            );
+        }
 
 
         if (
@@ -4321,16 +4623,274 @@ function initializeMonthlyMovementsModal() {
     }
 
 
+    function normalizeSearchText(value) {
+
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLowerCase();
+
+    }
+
+
+    function populateCategoryFilter(entries) {
+
+        const selected =
+            categoryFilter.value || "all";
+
+
+        const categories =
+            [...new Set(
+                entries
+                    .map(entry => entry.movement.category)
+                    .filter(Boolean)
+            )]
+                .sort((a, b) =>
+                    a.localeCompare(b, "es")
+                );
+
+
+        categoryFilter.innerHTML =
+            '<option value="all">Todas</option>';
+
+
+        categories.forEach(category => {
+
+            const option =
+                document.createElement("option");
+
+            option.value = category;
+            option.textContent = category;
+
+            categoryFilter.appendChild(option);
+
+        });
+
+
+        if (
+            selected === "all" ||
+            categories.includes(selected)
+        ) {
+            categoryFilter.value = selected;
+        }
+
+    }
+
+
+    function movementMatchesFilters(entry) {
+
+        const {
+            movement,
+            creditName,
+            scheduled
+        } = entry;
+
+
+        if (
+            statusFilter.value === "completed" &&
+            scheduled
+        ) {
+            return false;
+        }
+
+
+        if (
+            statusFilter.value === "scheduled" &&
+            !scheduled
+        ) {
+            return false;
+        }
+
+
+        if (
+            typeFilter.value !== "all" &&
+            movement.type !== typeFilter.value
+        ) {
+            return false;
+        }
+
+
+        if (
+            categoryFilter.value !== "all" &&
+            (movement.category || "") !== categoryFilter.value
+        ) {
+            return false;
+        }
+
+
+        if (
+            paymentFilter.value !== "all" &&
+            movement.paymentMethod !== paymentFilter.value
+        ) {
+            return false;
+        }
+
+
+        const query =
+            normalizeSearchText(
+                searchInput.value.trim()
+            );
+
+
+        if (!query) {
+            return true;
+        }
+
+
+        const searchable =
+            normalizeSearchText([
+                movement.description,
+                movement.category,
+                movement.notes,
+                creditName,
+                movement.paymentMethod,
+                movement.type
+            ].filter(Boolean).join(" "));
+
+
+        return searchable.includes(query);
+
+    }
+
+
+    function renderLoadedMovements() {
+
+        content.innerHTML = "";
+
+
+        const filteredEntries =
+            loadedEntries.filter(
+                movementMatchesFilters
+            );
+
+
+        const completedEntries =
+            filteredEntries.filter(
+                entry => !entry.scheduled
+            );
+
+
+        const scheduledEntries =
+            filteredEntries.filter(
+                entry => entry.scheduled
+            );
+
+
+        if (completedEntries.length > 0) {
+
+            const section =
+                createSection("Realizados");
+
+
+            completedEntries.forEach(entry => {
+
+                section.appendChild(
+                    createMovementRow(entry)
+                );
+
+            });
+
+
+            content.appendChild(section);
+
+        }
+
+
+        if (scheduledEntries.length > 0) {
+
+            const section =
+                createSection("Programados");
+
+
+            scheduledEntries.forEach(entry => {
+
+                section.appendChild(
+                    createMovementRow(entry)
+                );
+
+            });
+
+
+            content.appendChild(section);
+
+        }
+
+
+        const total = filteredEntries.length;
+
+        resultCount.textContent =
+            `${total} ${
+                total === 1
+                    ? "movimiento"
+                    : "movimientos"
+            }`;
+
+
+        if (total === 0) {
+
+            const empty =
+                document.createElement("p");
+
+            empty.classList.add(
+                "monthly-movements-empty"
+            );
+
+            empty.textContent =
+                loadedEntries.length > 0
+                    ? "No hay movimientos que coincidan con los filtros."
+                    : "No hay movimientos para este mes.";
+
+            content.appendChild(empty);
+
+        }
+
+    }
+
+
+    [
+        searchInput,
+        statusFilter,
+        typeFilter,
+        categoryFilter,
+        paymentFilter
+    ].forEach(control => {
+
+        const eventName =
+            control === searchInput
+                ? "input"
+                : "change";
+
+        control.addEventListener(
+            eventName,
+            renderLoadedMovements
+        );
+
+    });
+
+
+    clearFiltersButton.addEventListener(
+        "click",
+        () => {
+
+            searchInput.value = "";
+            statusFilter.value = "all";
+            typeFilter.value = "all";
+            categoryFilter.value = "all";
+            paymentFilter.value = "all";
+
+            renderLoadedMovements();
+
+        }
+    );
+
+
     openButton.addEventListener(
         "click",
         async () => {
 
             try {
 
-                const {
-                    year,
-                    month
-                } =
+                const { year, month } =
                     getCurrentCalendarPeriod();
 
 
@@ -4346,10 +4906,6 @@ function initializeMonthlyMovementsModal() {
                     );
 
 
-                content.innerHTML =
-                    "";
-
-
                 title.textContent =
                     `Movimientos · ` +
                     `${monthNames[month]} ${year}`;
@@ -4358,133 +4914,56 @@ function initializeMonthlyMovementsModal() {
                 const monthPrefix =
                     `${year}-${String(
                         month + 1
-                    ).padStart(
-                        2,
-                        "0"
-                    )}-`;
+                    ).padStart(2, "0")}-`;
 
 
-                /*
-                    =================================
-                    DETERMINAR PERIODO
-                    =================================
-                */
-
-                const today =
-                    new Date();
-
+                const today = new Date();
 
                 const currentPeriod =
-                    today.getFullYear() *
-                        12 +
+                    today.getFullYear() * 12 +
                     today.getMonth();
 
-
                 const visiblePeriod =
-                    year * 12 +
-                    month;
+                    year * 12 + month;
 
 
-                /*
-                    =================================
-                    REALIZADOS
-                    =================================
-                */
+                const entries = [];
 
-                const completedMovements =
+
+                if (visiblePeriod <= currentPeriod) {
+
                     movements
-                        .filter(
-                            movement =>
-
-                                movement.status ===
-                                    "completed"
-
-                                &&
-
-                                movement.completedDate
-                                    ?.startsWith(
-                                        monthPrefix
-                                    )
+                        .filter(movement =>
+                            movement.status === "completed" &&
+                            movement.completedDate
+                                ?.startsWith(monthPrefix)
                         )
-                        .sort(
-                            (a, b) =>
-
-                                a.completedDate
-                                    .localeCompare(
-                                        b.completedDate
-                                    )
-                        );
-
-
-                if (
-                    visiblePeriod <=
-                        currentPeriod
-                    &&
-                    completedMovements.length >
-                        0
-                ) {
-
-                    const section =
-                        createSection(
-                            "Realizados"
-                        );
-
-
-                    completedMovements.forEach(
-                        movement => {
+                        .sort((a, b) =>
+                            a.completedDate.localeCompare(
+                                b.completedDate
+                            )
+                        )
+                        .forEach(movement => {
 
                             const credit =
-                                credits.find(
-                                    item =>
-                                        item.id ===
-                                        movement.creditId
+                                credits.find(item =>
+                                    String(item.id) ===
+                                    String(movement.creditId)
                                 );
 
+                            entries.push({
+                                movement,
+                                date: movement.completedDate,
+                                creditName: credit?.name || null,
+                                scheduled: false
+                            });
 
-                            section.appendChild(
-                                createMovementRow({
-
-                                    movement,
-
-                                    date:
-                                        movement.completedDate,
-
-                                    creditName:
-                                        credit?.name ||
-                                        null,
-
-                                    scheduled:
-                                        false
-
-                                })
-                            );
-
-                        }
-                    );
-
-
-                    content.appendChild(
-                        section
-                    );
+                        });
 
                 }
 
 
-                /*
-                    =================================
-                    PROGRAMADOS
-                    =================================
-
-                    Recorremos cada día porque
-                    getScheduledMovementsForDate()
-                    ya conoce recurrencias,
-                    ocurrencias realizadas, etc.
-                */
-
-                if (
-                    visiblePeriod >=
-                    currentPeriod
-                ) {
+                if (visiblePeriod >= currentPeriod) {
 
                     const daysInMonth =
                         new Date(
@@ -4492,10 +4971,6 @@ function initializeMonthlyMovementsModal() {
                             month + 1,
                             0
                         ).getDate();
-
-
-                    const occurrences =
-                        [];
 
 
                     for (
@@ -4508,16 +4983,8 @@ function initializeMonthlyMovementsModal() {
                             `${year}-` +
                             `${String(
                                 month + 1
-                            ).padStart(
-                                2,
-                                "0"
-                            )}-` +
-                            `${String(
-                                day
-                            ).padStart(
-                                2,
-                                "0"
-                            )}`;
+                            ).padStart(2, "0")}-` +
+                            `${String(day).padStart(2, "0")}`;
 
 
                         const dayMovements =
@@ -4527,113 +4994,44 @@ function initializeMonthlyMovementsModal() {
                             );
 
 
-                        dayMovements.forEach(
-                            movement => {
+                        dayMovements.forEach(movement => {
 
-                                occurrences.push({
-
-                                    movement,
-
-                                    date
-
-                                });
-
-                            }
-                        );
-
-                    }
-
-
-                    if (
-                        occurrences.length >
-                        0
-                    ) {
-
-                        const section =
-                            createSection(
-                                "Programados"
-                            );
-
-
-                        occurrences.forEach(
-                            ({
-                                movement,
-                                date
-                            }) => {
-
-                                const credit =
-                                    credits.find(
-                                        item =>
-                                            item.id ===
-                                            movement.creditId
-                                    );
-
-
-                                section.appendChild(
-                                    createMovementRow({
-
-                                        movement,
-
-                                        date,
-
-                                        creditName:
-                                            credit?.name ||
-                                            null,
-
-                                        scheduled:
-                                            true
-
-                                    })
+                            const credit =
+                                credits.find(item =>
+                                    String(item.id) ===
+                                    String(movement.creditId)
                                 );
 
-                            }
-                        );
+                            entries.push({
+                                movement,
+                                date,
+                                creditName: credit?.name || null,
+                                scheduled: true
+                            });
 
-
-                        content.appendChild(
-                            section
-                        );
+                        });
 
                     }
 
                 }
 
 
-                /*
-                    Si el mes no tiene nada.
-                */
-
-                if (
-                    content.children.length ===
-                    0
-                ) {
-
-                    const empty =
-                        document.createElement(
-                            "p"
-                        );
+                entries.sort((a, b) =>
+                    a.date.localeCompare(b.date)
+                );
 
 
-                    empty.classList.add(
-                        "monthly-movements-empty"
-                    );
+                loadedEntries = entries;
 
+                populateCategoryFilter(
+                    loadedEntries
+                );
 
-                    empty.textContent =
-                        "No hay movimientos para este mes.";
-
-
-                    content.appendChild(
-                        empty
-                    );
-
-                }
-
+                renderLoadedMovements();
 
                 modal.classList.remove(
                     "hidden"
                 );
-
 
             } catch (error) {
 
@@ -4641,7 +5039,6 @@ function initializeMonthlyMovementsModal() {
                     "No se pudieron cargar los movimientos del mes:",
                     error
                 );
-
 
                 showNotification(
                     "No se pudieron mostrar los movimientos del mes.",
@@ -4652,6 +5049,7 @@ function initializeMonthlyMovementsModal() {
 
         }
     );
+
 
 }
 
@@ -4791,6 +5189,20 @@ if (
                 );
 
 
+                /*
+                    Comprobar recordatorios después
+                    de que el Service Worker esté listo.
+                */
+                checkDueNotifications()
+                    .catch(
+                        error =>
+                            console.warn(
+                                "No se pudieron comprobar los recordatorios:",
+                                error
+                            )
+                    );
+
+
             } catch (error) {
 
                 console.error(
@@ -4804,3 +5216,27 @@ if (
     );
 
 }
+
+/*
+    Volver a comprobar recordatorios cuando
+    el usuario regresa a la app.
+*/
+document.addEventListener(
+    "visibilitychange",
+    () => {
+
+        if (!document.hidden) {
+
+            checkDueNotifications()
+                .catch(
+                    error =>
+                        console.warn(
+                            "No se pudieron comprobar los recordatorios al volver a la app:",
+                            error
+                        )
+                );
+
+        }
+
+    }
+);
