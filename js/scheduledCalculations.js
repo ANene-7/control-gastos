@@ -257,6 +257,175 @@ function matchesSemimonthlyRecurrence(
 
 
 /*
+    Convierte una fecha local a YYYY-MM-DD.
+*/
+
+function formatDate(
+    date
+) {
+
+    const year =
+        date.getFullYear();
+
+    const month =
+        String(date.getMonth() + 1)
+            .padStart(2, "0");
+
+    const day =
+        String(date.getDate())
+            .padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+
+}
+
+
+function addDays(
+    dateString,
+    days
+) {
+
+    const date =
+        parseDate(dateString);
+
+    date.setDate(
+        date.getDate() + days
+    );
+
+    return formatDate(date);
+
+}
+
+
+function applyDateAdjustment(
+    nominalDate,
+    adjustment
+) {
+
+    if (!adjustment) {
+        return nominalDate;
+    }
+
+    let result =
+        parseDate(
+            addDays(
+                nominalDate,
+                Number(adjustment.offsetDays || 0)
+            )
+        );
+
+    const direction =
+        adjustment.weekendDirection === "next"
+            ? 1
+            : -1;
+
+    for (let guard = 0; guard < 7; guard += 1) {
+
+        const weekday =
+            result.getDay();
+
+        const shouldMove =
+            (weekday === 6 && adjustment.adjustSaturday)
+            ||
+            (weekday === 0 && adjustment.adjustSunday);
+
+        if (!shouldMove) {
+            break;
+        }
+
+        result.setDate(
+            result.getDate() + direction
+        );
+
+    }
+
+    return formatDate(result);
+
+}
+
+
+function matchesNominalRecurrence(
+    movement,
+    date
+) {
+
+    if (date < movement.scheduledDate) {
+        return false;
+    }
+
+    const recurrenceType =
+        movement.recurrence?.type;
+
+    const daysDifference =
+        getDaysDifference(
+            movement.scheduledDate,
+            date
+        );
+
+    switch (recurrenceType) {
+
+        case "daily":
+            return true;
+
+        case "weekly":
+            return daysDifference % 7 === 0;
+
+        case "biweekly":
+            return daysDifference % 14 === 0;
+
+        case "semimonthly":
+            return matchesSemimonthlyRecurrence(
+                movement.scheduledDate,
+                date
+            );
+
+        case "monthly":
+            return matchesMonthlyRecurrence(
+                movement.scheduledDate,
+                date,
+                1
+            );
+
+        case "bimonthly":
+            return matchesMonthlyRecurrence(
+                movement.scheduledDate,
+                date,
+                2
+            );
+
+        case "quarterly":
+            return matchesMonthlyRecurrence(
+                movement.scheduledDate,
+                date,
+                3
+            );
+
+        case "biannual":
+            return matchesMonthlyRecurrence(
+                movement.scheduledDate,
+                date,
+                6
+            );
+
+        case "yearly":
+            return matchesMonthlyRecurrence(
+                movement.scheduledDate,
+                date,
+                12
+            );
+
+        case "custom":
+            return movement.scheduledDate === date;
+
+        default:
+            return false;
+
+    }
+
+}
+
+
+/*
     Determina si un movimiento programado
     debe aparecer en una fecha concreta.
 */
@@ -267,154 +436,64 @@ export function occursOnDate(
 ) {
 
     if (
-        movement.status !==
-        "scheduled"
+        movement.status !== "scheduled"
         ||
         !movement.scheduledDate
     ) {
-
         return false;
-
     }
 
-
-    /*
-        Nunca puede ocurrir antes
-        de su fecha inicial.
-    */
-
-    if (
-        date <
-        movement.scheduledDate
-    ) {
-
-        return false;
-
+    if (!movement.recurrence) {
+        return movement.scheduledDate === date;
     }
 
+    const adjustment =
+        movement.recurrence.dateAdjustment;
 
-    /*
-        Movimiento no recurrente.
-    */
-
-    if (
-        !movement.recurrence
-    ) {
-
-        return (
-            movement.scheduledDate ===
+    if (!adjustment) {
+        return matchesNominalRecurrence(
+            movement,
             date
         );
-
     }
 
+    /*
+        Una fecha efectiva puede quedar antes o después
+        de la fecha nominal. Probamos un margen corto
+        alrededor del día consultado y comparamos el
+        resultado del ajuste.
+    */
 
-    const recurrenceType =
-        movement.recurrence.type;
+    for (let delta = -7; delta <= 7; delta += 1) {
 
+        const nominalDate =
+            addDays(
+                date,
+                delta
+            );
 
-    const daysDifference =
-        getDaysDifference(
-            movement.scheduledDate,
-            date
-        );
+        if (
+            !matchesNominalRecurrence(
+                movement,
+                nominalDate
+            )
+        ) {
+            continue;
+        }
 
+        const effectiveDate =
+            applyDateAdjustment(
+                nominalDate,
+                adjustment
+            );
 
-    switch (
-        recurrenceType
-    ) {
-
-        case "daily":
-
+        if (effectiveDate === date) {
             return true;
-
-
-        case "weekly":
-
-            return (
-                daysDifference % 7 === 0
-            );
-
-
-        case "biweekly":
-
-            return (
-                daysDifference % 14 === 0
-            );
-
-
-        case "semimonthly":
-
-            return matchesSemimonthlyRecurrence(
-                movement.scheduledDate,
-                date
-            );
-
-
-        case "monthly":
-
-            return matchesMonthlyRecurrence(
-                movement.scheduledDate,
-                date,
-                1
-            );
-
-
-        case "bimonthly":
-
-            return matchesMonthlyRecurrence(
-                movement.scheduledDate,
-                date,
-                2
-            );
-
-
-        case "quarterly":
-
-            return matchesMonthlyRecurrence(
-                movement.scheduledDate,
-                date,
-                3
-            );
-
-
-        case "biannual":
-
-            return matchesMonthlyRecurrence(
-                movement.scheduledDate,
-                date,
-                6
-            );
-
-
-        case "yearly":
-
-            return matchesMonthlyRecurrence(
-                movement.scheduledDate,
-                date,
-                12
-            );
-
-
-        /*
-            "custom" todavía no tiene
-            configuración suficiente
-            para saber qué fechas usar.
-        */
-
-        case "custom":
-
-            return (
-                movement.scheduledDate ===
-                date
-            );
-
-
-        default:
-
-            return false;
+        }
 
     }
+
+    return false;
 
 }
 

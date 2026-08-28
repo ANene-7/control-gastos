@@ -29,6 +29,9 @@ let currentYear =
 let currentMonth =
     new Date().getMonth();
 
+let currentView =
+    "calendar";
+
 
 /*
     Permite que otras partes de la app
@@ -84,6 +87,17 @@ export function initializeCalendar() {
     const todayButton =
         document.getElementById(
             "todayButton"
+        );
+
+
+    const calendarViewButton =
+        document.getElementById(
+            "calendarViewButton"
+        );
+
+    const tableViewButton =
+        document.getElementById(
+            "tableViewButton"
         );
 
 
@@ -168,6 +182,29 @@ export function initializeCalendar() {
 
 
     /*
+        Cambiar representación mensual.
+        El periodo no cambia: sólo decidimos
+        si se muestra como calendario o tabla.
+    */
+
+    calendarViewButton?.addEventListener(
+        "click",
+        () => {
+            currentView = "calendar";
+            renderCalendar();
+        }
+    );
+
+    tableViewButton?.addEventListener(
+        "click",
+        () => {
+            currentView = "table";
+            renderCalendar();
+        }
+    );
+
+
+    /*
         Primera renderización
     */
 
@@ -223,48 +260,57 @@ const creditObligations =
     );
 
 
+    updateCalendarTitle();
+    updateTodayButtonVisibility();
+    updateViewSwitch();
+
+    const calendar =
+        document.getElementById(
+            "calendar"
+        );
+
+    const monthlyTable =
+        document.getElementById(
+            "monthlyTable"
+        );
+
+    const showingTable =
+        currentView === "table";
+
+    calendar?.classList.toggle(
+        "hidden",
+        showingTable
+    );
+
+    monthlyTable?.classList.toggle(
+        "hidden",
+        !showingTable
+    );
+
+    monthlyTable?.setAttribute(
+        "aria-hidden",
+        showingTable ? "false" : "true"
+    );
+
+    if (showingTable) {
+
+        await renderMonthlyTable(
+            movements,
+            credits,
+            creditObligations
+        );
+
+        dispatchPeriodChanged();
+        return;
+
+    }
+
+
     /*
         Limpiar calendario anterior.
     */
 
     calendarDays.innerHTML = "";
-
-
-    /*
-        Actualizar título.
-    */
-
-    updateCalendarTitle();
-
-
-    /*
-        Mostrar el botón "Hoy"
-        únicamente cuando estamos
-        fuera del mes actual.
-    */
-
-    const todayButton =
-        document.getElementById(
-            "todayButton"
-        );
-
-
-    const today =
-        new Date();
-
-
-    const isCurrentMonth =
-        currentYear ===
-            today.getFullYear()
-        &&
-        currentMonth ===
-            today.getMonth();
-
-
-    todayButton.classList.toggle(
-        "hidden",
-        isCurrentMonth
-    );
 
 
     /*
@@ -1130,22 +1176,491 @@ const creditObligations =
         está actualmente visible.
     */
 
+    dispatchPeriodChanged();
+
+}
+
+
+
+/*
+    Mantiene el selector Calendario / Tabla
+    sincronizado con la vista actual.
+*/
+function updateViewSwitch() {
+
+    const calendarViewButton =
+        document.getElementById(
+            "calendarViewButton"
+        );
+
+    const tableViewButton =
+        document.getElementById(
+            "tableViewButton"
+        );
+
+    const isCalendar =
+        currentView === "calendar";
+
+    calendarViewButton?.classList.toggle(
+        "active",
+        isCalendar
+    );
+
+    tableViewButton?.classList.toggle(
+        "active",
+        !isCalendar
+    );
+
+    calendarViewButton?.setAttribute(
+        "aria-pressed",
+        isCalendar ? "true" : "false"
+    );
+
+    tableViewButton?.setAttribute(
+        "aria-pressed",
+        isCalendar ? "false" : "true"
+    );
+
+}
+
+
+function updateTodayButtonVisibility() {
+
+    const todayButton =
+        document.getElementById(
+            "todayButton"
+        );
+
+    if (!todayButton) {
+        return;
+    }
+
+    const today =
+        new Date();
+
+    const isCurrentMonth =
+        currentYear === today.getFullYear()
+        &&
+        currentMonth === today.getMonth();
+
+    todayButton.classList.toggle(
+        "hidden",
+        isCurrentMonth
+    );
+
+}
+
+
+function dispatchPeriodChanged() {
+
     window.dispatchEvent(
         new CustomEvent(
             "calendarPeriodChanged",
             {
                 detail: {
-
-                    year:
-                        currentYear,
-
-                    month:
-                        currentMonth
-
+                    year: currentYear,
+                    month: currentMonth
                 }
             }
         )
     );
+
+}
+
+
+/*
+    Construye la vista tabular del mes usando
+    exactamente el mismo periodo y los mismos
+    cálculos que utiliza el calendario.
+*/
+async function renderMonthlyTable(
+    movements,
+    credits,
+    creditObligations
+) {
+
+    const body =
+        document.getElementById(
+            "monthlyTableBody"
+        );
+
+    if (!body) {
+        return;
+    }
+
+    body.innerHTML = "";
+
+    const daysInMonth =
+        new Date(
+            currentYear,
+            currentMonth + 1,
+            0
+        ).getDate();
+
+    const weekdayNames = [
+        "Domingo",
+        "Lunes",
+        "Martes",
+        "Miércoles",
+        "Jueves",
+        "Viernes",
+        "Sábado"
+    ];
+
+    for (
+        let day = 1;
+        day <= daysInMonth;
+        day++
+    ) {
+
+        const date =
+            `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+
+        const dateObject =
+            new Date(
+                currentYear,
+                currentMonth,
+                day
+            );
+
+        const weekday =
+            weekdayNames[
+                dateObject.getDay()
+            ];
+
+        const balance =
+            calculateCalendarBalance(
+                date,
+                movements,
+                credits
+            );
+
+        const completedMovements =
+            movements.filter(
+                movement =>
+                    movement.status === "completed"
+                    &&
+                    movement.completedDate === date
+            );
+
+        const scheduledMovements =
+            getScheduledMovementsForDate(
+                date,
+                movements
+            );
+
+        const obligations =
+            creditObligations.filter(
+                obligation =>
+                    obligation.dueDate === date
+                    &&
+                    obligation.pendingAmount > 0
+            );
+
+        const events = [];
+
+        completedMovements.forEach(
+            movement => {
+
+                let kind =
+                    movement.type === "income"
+                        ? "Ingreso"
+                        : "Egreso";
+
+                if (
+                    movement.purpose === "creditPayment"
+                ) {
+                    kind = "Pago a crédito";
+                } else if (
+                    movement.paymentMethod === "credit"
+                    &&
+                    movement.type === "expense"
+                ) {
+                    kind = "Compra a crédito";
+                }
+
+                events.push({
+                    description: movement.description,
+                    amount: movement.amount,
+                    kind,
+                    color: movement.labelColor || "gray",
+                    status: "completed",
+                    impact: getTableMovementImpact(movement)
+                });
+
+            }
+        );
+
+        scheduledMovements.forEach(
+            movement => {
+
+                events.push({
+                    description: movement.description,
+                    amount: movement.amount,
+                    kind:
+                        movement.type === "income"
+                            ? "Ingreso programado"
+                            : "Egreso programado",
+                    color: movement.labelColor || "gray",
+                    status: "scheduled",
+                    impact:
+                        movement.type === "income"
+                            ? movement.amount
+                            : -movement.amount
+                });
+
+            }
+        );
+
+        obligations.forEach(
+            obligation => {
+                events.push({
+                    description: obligation.creditName,
+                    amount: obligation.pendingAmount,
+                    kind: "Pago de crédito previsto",
+                    color: "gray",
+                    status: "scheduled",
+                    impact: -obligation.pendingAmount
+                });
+            }
+        );
+
+        if (
+            events.length === 0
+        ) {
+            events.push(null);
+        }
+
+        events.forEach(
+            (eventData, index) => {
+
+                const row =
+                    document.createElement(
+                        "div"
+                    );
+
+                row.classList.add(
+                    "monthly-table-row"
+                );
+
+                if (
+                    dateObject.getDay() === 0
+                    ||
+                    dateObject.getDay() === 6
+                ) {
+                    row.classList.add(
+                        "weekend"
+                    );
+                }
+
+                if (
+                    index > 0
+                ) {
+                    row.classList.add(
+                        "continuation-row"
+                    );
+                }
+
+                row.dataset.date = date;
+
+                const dayCell =
+                    document.createElement("div");
+                dayCell.className = "monthly-table-day";
+
+                const weekdayCell =
+                    document.createElement("div");
+                weekdayCell.className = "monthly-table-weekday";
+
+                const movementCell =
+                    document.createElement("div");
+                movementCell.className = "monthly-table-movement";
+
+                const dailyCell =
+                    document.createElement("div");
+                dailyCell.className = "monthly-table-money monthly-table-daily";
+
+                const accumulatedCell =
+                    document.createElement("div");
+                accumulatedCell.className = "monthly-table-money monthly-table-accumulated";
+
+                if (
+                    index === 0
+                ) {
+                    dayCell.textContent = day;
+                    weekdayCell.textContent = weekday;
+
+                    if (
+                        balance.dailyBalance !== null
+                        &&
+                        balance.dailyBalance !== 0
+                    ) {
+                        dailyCell.textContent =
+                            formatSignedCurrency(
+                                balance.dailyBalance
+                            );
+
+                        dailyCell.classList.add(
+                            balance.dailyBalance < 0
+                                ? "balance-negative"
+                                : "balance-positive"
+                        );
+                    }
+
+                    if (
+                        balance.accumulatedBalance !== null
+                    ) {
+                        accumulatedCell.textContent =
+                            formatCurrency(
+                                balance.accumulatedBalance
+                            );
+
+                        if (
+                            balance.accumulatedBalance < 0
+                        ) {
+                            accumulatedCell.classList.add(
+                                "balance-negative"
+                            );
+                        }
+
+                        if (
+                            balance.projected
+                        ) {
+                            accumulatedCell.classList.add(
+                                "projected-balance"
+                            );
+                            accumulatedCell.title =
+                                "Saldo proyectado";
+                        }
+                    }
+                }
+
+                if (eventData) {
+
+                    const movementLine =
+                        document.createElement("div");
+                    movementLine.className =
+                        "monthly-table-movement-line";
+
+                    const dot =
+                        document.createElement("span");
+                    dot.classList.add(
+                        "movement-color-dot",
+                        `movement-color-${eventData.color}`
+                    );
+
+                    const movementText =
+                        document.createElement("span");
+                    movementText.className =
+                        "monthly-table-movement-text";
+
+                    const description =
+                        document.createElement("span");
+                    description.className =
+                        "monthly-table-description";
+                    description.textContent =
+                        eventData.description;
+
+                    const meta =
+                        document.createElement("span");
+                    meta.className =
+                        "monthly-table-movement-meta";
+                    meta.textContent =
+                        `${eventData.kind} · ${formatSignedCurrency(eventData.impact, eventData.amount)}`;
+
+                    if (
+                        eventData.status === "scheduled"
+                    ) {
+                        movementLine.classList.add(
+                            "scheduled"
+                        );
+                    }
+
+                    movementText.appendChild(
+                        description
+                    );
+                    movementText.appendChild(
+                        meta
+                    );
+                    movementLine.appendChild(dot);
+                    movementLine.appendChild(
+                        movementText
+                    );
+                    movementCell.appendChild(
+                        movementLine
+                    );
+                }
+
+                row.appendChild(dayCell);
+                row.appendChild(weekdayCell);
+                row.appendChild(movementCell);
+                row.appendChild(dailyCell);
+                row.appendChild(accumulatedCell);
+
+                row.addEventListener(
+                    "click",
+                    () => {
+                        window.dispatchEvent(
+                            new CustomEvent(
+                                "openDayDetail",
+                                {
+                                    detail: { date }
+                                }
+                            )
+                        );
+                    }
+                );
+
+                body.appendChild(row);
+
+            }
+        );
+
+    }
+
+}
+
+
+function getTableMovementImpact(
+    movement
+) {
+
+    if (
+        movement.paymentMethod === "credit"
+        &&
+        movement.type === "expense"
+    ) {
+        return 0;
+    }
+
+    return movement.type === "income"
+        ? movement.amount
+        : -movement.amount;
+
+}
+
+
+function formatSignedCurrency(
+    amount,
+    referenceAmount = null
+) {
+
+    if (
+        amount === 0
+        &&
+        referenceAmount !== null
+    ) {
+        return `${formatCurrency(referenceAmount)} crédito`;
+    }
+
+    if (amount > 0) {
+        return `+${formatCurrency(amount)}`;
+    }
+
+    if (amount < 0) {
+        return `-${formatCurrency(Math.abs(amount))}`;
+    }
+
+    return formatCurrency(0);
 
 }
 

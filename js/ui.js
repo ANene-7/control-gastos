@@ -11,6 +11,7 @@ import {
 import {
     saveRecord,
     getAllRecords,
+    deleteRecord,
     replaceStoreRecords
 } from "./database.js";
 
@@ -97,6 +98,117 @@ export async function initializeUI(settings) {
     const initialBalanceDate =
         document.getElementById(
             "initialBalanceDate"
+        );
+
+
+    const payrollForm =
+        document.getElementById(
+            "payrollForm"
+        );
+
+    const payrollDescription =
+        document.getElementById(
+            "payrollDescription"
+        );
+
+    const payrollAmount =
+        document.getElementById(
+            "payrollAmount"
+        );
+
+    const payrollFrequency =
+        document.getElementById(
+            "payrollFrequency"
+        );
+
+    const payrollStartDate =
+        document.getElementById(
+            "payrollStartDate"
+        );
+
+    const payrollBaseOffset =
+        document.getElementById(
+            "payrollBaseOffset"
+        );
+
+    const payrollWeekendDirection =
+        document.getElementById(
+            "payrollWeekendDirection"
+        );
+
+    const payrollAdjustSunday =
+        document.getElementById(
+            "payrollAdjustSunday"
+        );
+
+    const payrollAdjustSaturday =
+        document.getElementById(
+            "payrollAdjustSaturday"
+        );
+
+    const payrollList =
+        document.getElementById(
+            "payrollList"
+        );
+
+    const payrollEditingId =
+        document.getElementById(
+            "payrollEditingId"
+        );
+
+    const cancelPayrollEditButton =
+        document.getElementById(
+            "cancelPayrollEditButton"
+        );
+
+    const fixedMovementForm =
+        document.getElementById(
+            "fixedMovementForm"
+        );
+
+    const fixedMovementEditingId =
+        document.getElementById(
+            "fixedMovementEditingId"
+        );
+
+    const fixedMovementType =
+        document.getElementById(
+            "fixedMovementType"
+        );
+
+    const fixedMovementDescription =
+        document.getElementById(
+            "fixedMovementDescription"
+        );
+
+    const fixedMovementAmount =
+        document.getElementById(
+            "fixedMovementAmount"
+        );
+
+    const fixedMovementFrequency =
+        document.getElementById(
+            "fixedMovementFrequency"
+        );
+
+    const fixedMovementStartDate =
+        document.getElementById(
+            "fixedMovementStartDate"
+        );
+
+    const fixedMovementPaymentMethod =
+        document.getElementById(
+            "fixedMovementPaymentMethod"
+        );
+
+    const fixedMovementList =
+        document.getElementById(
+            "fixedMovementList"
+        );
+
+    const cancelFixedMovementEditButton =
+        document.getElementById(
+            "cancelFixedMovementEditButton"
         );
 
     const creditsButton =
@@ -1035,6 +1147,519 @@ export async function initializeUI(settings) {
 
 
     /*
+        =================================
+        CONFIGURACIÓN DE NÓMINA
+        =================================
+    */
+
+    function resetPayrollForm() {
+
+        payrollForm.reset();
+
+        payrollDescription.value =
+            "Nómina";
+
+        payrollBaseOffset.value =
+            "0";
+
+        payrollWeekendDirection.value =
+            "previous";
+
+        payrollAdjustSunday.checked =
+            true;
+
+        payrollAdjustSaturday.checked =
+            false;
+
+        payrollEditingId.value =
+            "";
+
+        cancelPayrollEditButton
+            .classList
+            .add("hidden");
+
+    }
+
+
+    function formatPayrollRule(rule) {
+
+        const recurrence =
+            rule.recurrence || {};
+
+        const adjustment =
+            recurrence.dateAdjustment || {};
+
+        const frequencyLabels = {
+            weekly: "Semanal",
+            biweekly: "Bisemanal",
+            semimonthly: "Quincenal",
+            monthly: "Mensual"
+        };
+
+        const frequencyText =
+            frequencyLabels[recurrence.type] || "Mensual";
+
+        const offset =
+            Number(adjustment.offsetDays || 0);
+
+        const offsetText =
+            offset === -1
+                ? "1 día antes"
+                : offset === 1
+                    ? "1 día después"
+                    : "mismo día";
+
+        const weekendDays = [];
+
+        if (adjustment.adjustSaturday) {
+            weekendDays.push("sábado");
+        }
+
+        if (adjustment.adjustSunday) {
+            weekendDays.push("domingo");
+        }
+
+        const weekendText =
+            weekendDays.length
+                ? `${weekendDays.join(" y ")} → ${adjustment.weekendDirection === "next" ? "día hábil siguiente" : "día hábil anterior"}`
+                : "sin ajuste de fin de semana";
+
+        return `${frequencyText} · ${offsetText} · ${weekendText}`;
+
+    }
+
+
+    async function renderPayrollList() {
+
+        const movements =
+            await getAllRecords(
+                "movements"
+            );
+
+        const payrollRules =
+            movements
+                .filter(
+                    movement =>
+                        movement.kind ===
+                        "payroll"
+                        &&
+                        movement.status ===
+                        "scheduled"
+                )
+                .sort(
+                    (a, b) =>
+                        (a.description || "")
+                            .localeCompare(
+                                b.description || "",
+                                "es"
+                            )
+                );
+
+        payrollList.innerHTML =
+            "";
+
+        if (!payrollRules.length) {
+
+            payrollList.innerHTML = `
+                <p class="payroll-empty-state">
+                    No hay nóminas configuradas todavía.
+                </p>
+            `;
+
+            return;
+
+        }
+
+        payrollRules.forEach(
+            rule => {
+
+                const item =
+                    document.createElement(
+                        "div"
+                    );
+
+                item.className =
+                    "payroll-rule-item";
+
+                item.innerHTML = `
+                    <div class="payroll-rule-copy">
+                        <strong>${rule.description || "Nómina"}</strong>
+                        <span>$${Number(rule.amount || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <small>${formatPayrollRule(rule)}</small>
+                    </div>
+                    <div class="payroll-rule-actions">
+                        <button type="button" class="secondary-button payroll-edit-button">Editar</button>
+                        <button type="button" class="secondary-button payroll-delete-button">Eliminar</button>
+                    </div>
+                `;
+
+                item
+                    .querySelector(
+                        ".payroll-edit-button"
+                    )
+                    .addEventListener(
+                        "click",
+                        () => {
+
+                            const adjustment =
+                                rule.recurrence?.dateAdjustment || {};
+
+                            payrollEditingId.value =
+                                rule.id;
+
+                            payrollDescription.value =
+                                rule.description || "Nómina";
+
+                            payrollAmount.value =
+                                rule.amount;
+
+                            payrollFrequency.value =
+                                rule.recurrence?.type || "semimonthly";
+
+                            payrollStartDate.value =
+                                rule.scheduledDate || "";
+
+                            payrollBaseOffset.value =
+                                String(adjustment.offsetDays || 0);
+
+                            payrollWeekendDirection.value =
+                                adjustment.weekendDirection || "previous";
+
+                            payrollAdjustSunday.checked =
+                                Boolean(adjustment.adjustSunday);
+
+                            payrollAdjustSaturday.checked =
+                                Boolean(adjustment.adjustSaturday);
+
+                            cancelPayrollEditButton
+                                .classList
+                                .remove("hidden");
+
+                            payrollDescription.focus();
+
+                        }
+                    );
+
+                item
+                    .querySelector(
+                        ".payroll-delete-button"
+                    )
+                    .addEventListener(
+                        "click",
+                        async () => {
+
+                            const confirmed =
+                                confirm(
+                                    `¿Eliminar la programación de ${rule.description || "esta nómina"}? Los movimientos ya realizados no se eliminarán.`
+                                );
+
+                            if (!confirmed) {
+                                return;
+                            }
+
+                            await deleteRecord(
+                                "movements",
+                                rule.id
+                            );
+
+                            resetPayrollForm();
+                            await renderPayrollList();
+                            await renderCalendar();
+                            await updateCurrentBalance();
+
+                        }
+                    );
+
+                payrollList.appendChild(
+                    item
+                );
+
+            }
+        );
+
+    }
+
+
+    const fixedFrequencyLabels = {
+        weekly: "Semanal",
+        biweekly: "Bisemanal",
+        semimonthly: "Quincenal",
+        monthly: "Mensual",
+        bimonthly: "Bimestral",
+        quarterly: "Trimestral",
+        biannual: "Semestral",
+        yearly: "Anual"
+    };
+
+
+    function resetFixedMovementForm() {
+
+        if (!fixedMovementForm) {
+            return;
+        }
+
+        fixedMovementForm.reset();
+        fixedMovementEditingId.value = "";
+        fixedMovementType.value = "expense";
+        fixedMovementFrequency.value = "monthly";
+        fixedMovementPaymentMethod.value = "debit";
+        cancelFixedMovementEditButton.classList.add("hidden");
+
+    }
+
+
+    async function renderFixedMovementList() {
+
+        if (!fixedMovementList) {
+            return;
+        }
+
+        const movements = await getAllRecords("movements");
+        const rules = movements
+            .filter(item => item.kind === "fixed")
+            .sort((a, b) => (a.description || "").localeCompare(b.description || "", "es"));
+
+        fixedMovementList.innerHTML = "";
+
+        if (!rules.length) {
+            fixedMovementList.innerHTML = `
+                <p class="payroll-empty-state">
+                    No hay ingresos o egresos fijos configurados todavía.
+                </p>
+            `;
+            return;
+        }
+
+        rules.forEach(rule => {
+
+            const item = document.createElement("div");
+            item.className = "payroll-rule-item";
+
+            const frequency =
+                fixedFrequencyLabels[rule.recurrence?.type] || "Recurrente";
+
+            const typeText =
+                rule.type === "income" ? "Ingreso" : "Egreso";
+
+            const methodText =
+                rule.paymentMethod === "cash" ? "Efectivo" : "Débito";
+
+            item.innerHTML = `
+                <div class="payroll-rule-copy">
+                    <strong>${rule.description || "Movimiento fijo"}</strong>
+                    <span>${typeText} · ${formatCurrency(Number(rule.amount || 0))}</span>
+                    <small>${frequency} · inicia ${rule.scheduledDate || "—"} · ${methodText}</small>
+                </div>
+                <div class="payroll-rule-actions">
+                    <button type="button" class="secondary-button fixed-edit-button">Editar</button>
+                    <button type="button" class="secondary-button fixed-delete-button">Eliminar</button>
+                </div>
+            `;
+
+            item.querySelector(".fixed-edit-button").addEventListener("click", () => {
+                fixedMovementEditingId.value = rule.id;
+                fixedMovementType.value = rule.type || "expense";
+                fixedMovementDescription.value = rule.description || "";
+                fixedMovementAmount.value = Number(rule.amount || 0);
+                fixedMovementFrequency.value = rule.recurrence?.type || "monthly";
+                fixedMovementStartDate.value = rule.scheduledDate || "";
+                fixedMovementPaymentMethod.value = rule.paymentMethod || "debit";
+                cancelFixedMovementEditButton.classList.remove("hidden");
+                fixedMovementDescription.focus();
+            });
+
+            item.querySelector(".fixed-delete-button").addEventListener("click", async () => {
+                const confirmed = window.confirm(
+                    `¿Eliminar la programación de ${rule.description || "este movimiento"}? Los movimientos ya realizados no se eliminarán.`
+                );
+
+                if (!confirmed) {
+                    return;
+                }
+
+                await deleteRecord("movements", rule.id);
+                await renderFixedMovementList();
+                await renderCalendar();
+                await updateCurrentBalance();
+            });
+
+            fixedMovementList.appendChild(item);
+
+        });
+
+    }
+
+
+    fixedMovementForm?.addEventListener(
+        "submit",
+        async event => {
+
+            event.preventDefault();
+
+            const amount = Number(fixedMovementAmount.value);
+            const description = fixedMovementDescription.value.trim();
+            const startDate = fixedMovementStartDate.value;
+
+            if (!description) {
+                alert("Escribe un concepto para el movimiento fijo.");
+                return;
+            }
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                alert("Introduce un monto válido.");
+                return;
+            }
+
+            if (!startDate) {
+                alert("Selecciona una fecha de inicio.");
+                return;
+            }
+
+            const existingId = fixedMovementEditingId.value;
+            const type = fixedMovementType.value;
+
+            const fixedRule = {
+                id: existingId || `fixed-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                kind: "fixed",
+                type,
+                purpose: "regular",
+                description,
+                amount,
+                paymentMethod: fixedMovementPaymentMethod.value,
+                creditId: null,
+                status: "scheduled",
+                scheduledDate: startDate,
+                completedDate: null,
+                recurrence: {
+                    type: fixedMovementFrequency.value
+                },
+                labelColor: type === "income" ? "green" : "red",
+                notes: "Movimiento fijo configurado desde Configuración",
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                await saveRecord("movements", fixedRule);
+                resetFixedMovementForm();
+                await renderFixedMovementList();
+                await renderCalendar();
+                await updateCurrentBalance();
+            } catch (error) {
+                console.error("Error al guardar movimiento fijo:", error);
+                alert("No se pudo guardar el movimiento fijo.");
+            }
+
+        }
+    );
+
+
+    cancelFixedMovementEditButton?.addEventListener(
+        "click",
+        resetFixedMovementForm
+    );
+
+
+    payrollForm.addEventListener(
+        "submit",
+        async event => {
+
+            event.preventDefault();
+
+            const amount =
+                Number(payrollAmount.value);
+
+            const description =
+                payrollDescription.value.trim();
+
+            const startDate =
+                payrollStartDate.value;
+
+            if (!description) {
+                alert("Escribe un concepto para la nómina.");
+                return;
+            }
+
+            if (!Number.isFinite(amount) || amount <= 0) {
+                alert("Introduce un monto de nómina válido.");
+                return;
+            }
+
+            if (!startDate) {
+                alert("Selecciona una fecha nominal de inicio.");
+                return;
+            }
+
+            const existingId =
+                payrollEditingId.value;
+
+            const payrollRule = {
+                id:
+                    existingId ||
+                    `payroll-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+                kind: "payroll",
+                type: "income",
+                purpose: "regular",
+                description,
+                amount,
+                paymentMethod: "debit",
+                creditId: null,
+                status: "scheduled",
+                scheduledDate: startDate,
+                completedDate: null,
+                recurrence: {
+                    type: payrollFrequency.value,
+                    dateAdjustment: {
+                        offsetDays:
+                            Number(payrollBaseOffset.value),
+                        adjustSaturday:
+                            payrollAdjustSaturday.checked,
+                        adjustSunday:
+                            payrollAdjustSunday.checked,
+                        weekendDirection:
+                            payrollWeekendDirection.value
+                    }
+                },
+                labelColor: "green",
+                notes: "Nómina configurada desde Configuración",
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+
+                await saveRecord(
+                    "movements",
+                    payrollRule
+                );
+
+                resetPayrollForm();
+                await renderPayrollList();
+                await renderCalendar();
+                await updateCurrentBalance();
+
+            } catch (error) {
+
+                console.error(
+                    "Error al guardar nómina:",
+                    error
+                );
+
+                alert(
+                    "No se pudo guardar la configuración de nómina."
+                );
+
+            }
+
+        }
+    );
+
+
+    cancelPayrollEditButton.addEventListener(
+        "click",
+        resetPayrollForm
+    );
+
+
+    /*
         ABRIR CONFIGURACIÓN
     */
 
@@ -1056,6 +1681,9 @@ export async function initializeUI(settings) {
             settingsModal
                 .classList
                 .remove("hidden");
+
+            renderPayrollList();
+            renderFixedMovementList();
 
         }
     );
@@ -2474,6 +3102,11 @@ function updateBalanceDisplay(
         document.getElementById(
             "currentBalance"
         );
+
+
+    if (!currentBalance) {
+        return;
+    }
 
 
     currentBalance.textContent =

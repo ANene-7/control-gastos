@@ -1,5 +1,4 @@
-const CACHE_NAME =
-    "control-gastos-v4";
+const CACHE_NAME = "control-gastos-v16";
 
 
 const APP_FILES = [

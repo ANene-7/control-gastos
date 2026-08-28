@@ -20,9 +20,18 @@
 
     <header class="app-header">
 
-        <div class="app-title">
-            <h1>Control de Gastos</h1>
-            <p>Control de flujo de efectivo</p>
+        <div class="header-overview">
+
+            <div class="app-title">
+                <h1>Control de Gastos</h1>
+                <p>Control de flujo de efectivo</p>
+            </div>
+
+            <div class="header-current-balance" aria-label="Saldo actual">
+                <span>Saldo actual</span>
+                <strong id="currentBalance">$0.00</strong>
+            </div>
+
         </div>
 
         <div class="header-actions">
@@ -125,28 +134,6 @@
         <!-- Resumen -->
         <section class="summary-section">
 
-            <!-- Saldo actual -->
-            <div class="summary-card summary-current">
-
-                <div class="summary-card-content">
-
-                    <span class="summary-label">
-                        Saldo actual
-                    </span>
-
-                    <strong id="currentBalance">
-                        $0.00
-                    </strong>
-
-                </div>
-
-                <div class="summary-card-icon">
-                    $
-                </div>
-
-            </div>
-
-
             <!-- Saldo mínimo previsto -->
             <div class="summary-card minimum-balance-card">
 
@@ -243,7 +230,30 @@
         <!-- Navegación del calendario -->
         <section class="calendar-section">
 
-            <div class="calendar-header">
+            <div class="calendar-controls">
+
+                <div
+                    class="view-switch"
+                    role="group"
+                    aria-label="Vista mensual">
+
+                    <button
+                        id="calendarViewButton"
+                        class="view-switch-button active"
+                        type="button"
+                        aria-pressed="true">
+                        Calendario
+                    </button>
+
+                    <button
+                        id="tableViewButton"
+                        class="view-switch-button"
+                        type="button"
+                        aria-pressed="false">
+                        Tabla
+                    </button>
+
+                </div>
 
                 <button
                     id="previousMonthButton"
@@ -302,6 +312,18 @@
                     class="calendar-days">
                 </div>
 
+            </div>
+
+            <!-- Vista tabular mensual -->
+            <div id="monthlyTable" class="monthly-table hidden" aria-hidden="true">
+                <div class="monthly-table-header" role="row">
+                    <div>Día</div>
+                    <div>Semana</div>
+                    <div>Movimientos</div>
+                    <div>Balance del día</div>
+                    <div>Saldo acumulado</div>
+                </div>
+                <div id="monthlyTableBody" class="monthly-table-body"></div>
             </div>
 
         </section>
@@ -673,7 +695,7 @@
 
         <div class="modal-header">
 
-            <h2>Configuración inicial</h2>
+            <h2>Configuración</h2>
 
         </div>
 
@@ -732,6 +754,165 @@
             </div>
 
         </form>
+
+        <section class="settings-section payroll-settings-section">
+
+            <div class="settings-section-header">
+                <div>
+                    <h3>Nómina</h3>
+                    <p>Configura ingresos de nómina semanales, bisemanales, quincenales o mensuales y cómo se ajustan cuando la fecha de pago cae en fin de semana.</p>
+                </div>
+            </div>
+
+            <form id="payrollForm" class="payroll-form">
+
+                <input type="hidden" id="payrollEditingId">
+
+                <div class="form-group">
+                    <label for="payrollDescription">Concepto</label>
+                    <input type="text" id="payrollDescription" placeholder="Ej. Nómina" value="Nómina" required>
+                </div>
+
+                <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="payrollAmount">Monto</label>
+                        <input type="number" id="payrollAmount" min="0" step="0.01" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payrollFrequency">Frecuencia</label>
+                        <select id="payrollFrequency" required>
+                            <option value="weekly">Semanal</option>
+                            <option value="biweekly">Bisemanal (cada 2 semanas)</option>
+                            <option value="semimonthly">Quincenal (15 y fin de mes)</option>
+                            <option value="monthly">Mensual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="payrollStartDate">Fecha nominal de inicio</label>
+                    <input type="date" id="payrollStartDate" required>
+                    <small>Sirve como referencia para comenzar la programación. En mensual, el día elegido será el día nominal de pago. En semanal y bisemanal, se toma el día de la semana de esta fecha como referencia fija para las siguientes ocurrencias. En quincenal, la programación usa los días 15 y último día de cada mes.</small>
+                </div>
+
+                <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="payrollBaseOffset">Pago habitual</label>
+                        <select id="payrollBaseOffset">
+                            <option value="0">El mismo día</option>
+                            <option value="-1">1 día antes</option>
+                            <option value="1">1 día después</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="payrollWeekendDirection">Si cae en día no laborable</label>
+                        <select id="payrollWeekendDirection">
+                            <option value="previous">Mover al día hábil anterior</option>
+                            <option value="next">Mover al día hábil siguiente</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="payroll-weekend-options">
+                    <span class="field-label">Ajustar cuando la fecha resultante caiga en:</span>
+                    <label>
+                        <input type="checkbox" id="payrollAdjustSunday" checked>
+                        Domingo
+                    </label>
+                    <label>
+                        <input type="checkbox" id="payrollAdjustSaturday">
+                        Sábado
+                    </label>
+                </div>
+
+                <div class="form-actions payroll-form-actions">
+                    <button type="submit" class="primary-button" id="savePayrollButton">Guardar nómina</button>
+                    <button type="button" class="secondary-button hidden" id="cancelPayrollEditButton">Cancelar edición</button>
+                </div>
+
+            </form>
+
+            <div id="payrollList" class="payroll-list"></div>
+
+        </section>
+
+        <section class="settings-section fixed-movements-section">
+
+            <div class="settings-section-header">
+                <div>
+                    <h3>Ingresos y egresos fijos</h3>
+                    <p>Registra movimientos recurrentes que normalmente se repiten con el mismo monto y frecuencia. Se proyectan como programados hasta que los marques como realizados.</p>
+                </div>
+            </div>
+
+            <form id="fixedMovementForm" class="payroll-form">
+
+                <input type="hidden" id="fixedMovementEditingId">
+
+                <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="fixedMovementType">Tipo</label>
+                        <select id="fixedMovementType" required>
+                            <option value="expense">Egreso</option>
+                            <option value="income">Ingreso</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixedMovementDescription">Concepto</label>
+                        <input type="text" id="fixedMovementDescription" placeholder="Ej. Internet, renta, apoyo familiar" required>
+                    </div>
+                </div>
+
+                <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="fixedMovementAmount">Monto</label>
+                        <input type="number" id="fixedMovementAmount" min="0" step="0.01" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixedMovementFrequency">Frecuencia</label>
+                        <select id="fixedMovementFrequency" required>
+                            <option value="weekly">Semanal</option>
+                            <option value="biweekly">Bisemanal (cada 2 semanas)</option>
+                            <option value="semimonthly">Quincenal (15 y fin de mes)</option>
+                            <option value="monthly" selected>Mensual</option>
+                            <option value="bimonthly">Bimestral</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="biannual">Semestral</option>
+                            <option value="yearly">Anual</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="settings-form-grid">
+                    <div class="form-group">
+                        <label for="fixedMovementStartDate">Fecha de inicio</label>
+                        <input type="date" id="fixedMovementStartDate" required>
+                        <small>Marca la primera ocurrencia. En semanal y bisemanal fija también el día de la semana de referencia.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="fixedMovementPaymentMethod">Método de pago</label>
+                        <select id="fixedMovementPaymentMethod">
+                            <option value="debit">Débito</option>
+                            <option value="cash">Efectivo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-actions payroll-form-actions">
+                    <button type="submit" class="primary-button" id="saveFixedMovementButton">Guardar movimiento fijo</button>
+                    <button type="button" class="secondary-button hidden" id="cancelFixedMovementEditButton">Cancelar edición</button>
+                </div>
+
+            </form>
+
+            <div id="fixedMovementList" class="payroll-list"></div>
+
+        </section>
 
         <div class="backup-section">
 

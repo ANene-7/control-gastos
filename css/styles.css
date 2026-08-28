@@ -3524,3 +3524,981 @@ textarea {
     }
 
 }
+
+/* ================================
+   V2.0.1a — HEADER + MONTHLY VIEW
+================================ */
+
+.header-overview {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 32px;
+}
+
+.header-current-balance {
+    flex: 0 0 auto;
+    min-width: 150px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.header-current-balance span {
+    display: block;
+    margin-bottom: 2px;
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.header-current-balance strong {
+    display: block;
+    color: white;
+    font-size: 22px;
+    font-weight: 750;
+    letter-spacing: -0.025em;
+    white-space: nowrap;
+}
+
+/* V2: las cuatro tarjetas restantes pertenecen al periodo seleccionado. */
+.summary-section {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Barra mensual: periodo y modo de representación comparten el mismo estado. */
+.calendar-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-areas: "previous period views next";
+    align-items: center;
+    gap: 14px;
+    padding: 18px 22px;
+    background: linear-gradient(135deg, var(--color-primary-950), var(--color-primary-900));
+    color: white;
+}
+
+.calendar-controls #previousMonthButton {
+    grid-area: previous;
+}
+
+.calendar-controls #nextMonthButton {
+    grid-area: next;
+}
+
+.calendar-controls .calendar-title-container {
+    grid-area: period;
+    min-width: 0;
+}
+
+.view-switch {
+    grid-area: views;
+    justify-self: end;
+    display: inline-grid;
+    grid-template-columns: repeat(2, minmax(105px, 1fr));
+    padding: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 10px;
+}
+
+.view-switch-button {
+    min-height: 34px;
+    padding: 7px 14px;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.view-switch-button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.10);
+    color: white;
+}
+
+.view-switch-button.active {
+    background: white;
+    color: var(--color-primary-950);
+    box-shadow: 0 1px 4px rgba(8, 20, 38, 0.18);
+}
+
+.view-switch-button:disabled {
+    cursor: default;
+    opacity: 0.56;
+}
+
+/* El fondo ahora pertenece a .calendar-controls, no al antiguo header. */
+.calendar-controls .calendar-title-container h2 {
+    color: white;
+}
+
+.calendar-controls .calendar-title-container .secondary-button {
+    background: rgba(255, 255, 255, 0.12);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.calendar-controls .calendar-title-container .secondary-button:hover {
+    background: rgba(255, 255, 255, 0.20);
+}
+
+@media (max-width: 1150px) and (min-width: 801px) {
+    .summary-section {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .summary-card,
+    .summary-card:nth-child(4),
+    .summary-card:nth-child(5) {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 800px) {
+    .header-overview {
+        width: 100%;
+        gap: 16px;
+    }
+
+    .header-current-balance {
+        min-width: 118px;
+    }
+
+    .header-current-balance span {
+        font-size: 10px;
+    }
+
+    .header-current-balance strong {
+        font-size: 18px;
+    }
+
+    .summary-section {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .summary-card,
+    .summary-card:nth-child(4),
+    .summary-card:nth-child(5) {
+        grid-column: auto;
+    }
+
+    .calendar-controls {
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "views views views"
+            "previous period next";
+        gap: 10px 8px;
+        padding: 12px 14px 13px;
+    }
+
+    .view-switch {
+        width: 100%;
+        justify-self: stretch;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .view-switch-button {
+        min-height: 35px;
+        padding: 7px 10px;
+        font-size: 12px;
+    }
+
+    .calendar-controls .calendar-title-container {
+        justify-self: center;
+        justify-content: center;
+        min-width: 0;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        font-size: 17px;
+        white-space: nowrap;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        padding: 6px 8px;
+        font-size: 10px;
+    }
+}
+
+@media (max-width: 430px) {
+    .app-title h1 {
+        font-size: 18px;
+    }
+
+    .app-title p {
+        font-size: 11px;
+    }
+
+    .header-current-balance {
+        min-width: 104px;
+    }
+
+    .header-current-balance strong {
+        font-size: 16px;
+    }
+
+    .calendar-controls {
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        font-size: 15px;
+    }
+}
+
+/* ================================
+   V2.0.1a-r2 — DESKTOP HEADER TUNING
+================================ */
+
+@media (min-width: 801px) {
+
+    /*
+        Tres zonas claras en escritorio:
+        identidad | saldo actual | acciones.
+        El saldo queda realmente centrado en el header.
+    */
+    .app-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        column-gap: 28px;
+    }
+
+    .header-overview {
+        display: contents;
+    }
+
+    .app-title {
+        grid-column: 1;
+        justify-self: start;
+        min-width: 0;
+    }
+
+    .header-current-balance {
+        grid-column: 2;
+        justify-self: center;
+        min-width: 170px;
+        text-align: center;
+    }
+
+    .header-actions {
+        grid-column: 3;
+        justify-self: end;
+        display: grid;
+        grid-template-columns: auto auto auto;
+        align-items: center;
+        gap: 9px;
+    }
+
+    .monthly-movements-button {
+        grid-column: 1;
+    }
+
+    .header-menu {
+        position: relative;
+        grid-column: 2;
+        display: flex;
+        justify-content: center;
+    }
+
+    .header-menu-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 42px;
+        height: 38px;
+        padding: 0;
+    }
+
+    .header-menu-icon {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .add-movement-header-button {
+        grid-column: 3;
+    }
+
+    /* Configuración y Créditos pasan al mismo dropdown que en móvil. */
+    .header-menu-panel {
+        display: none;
+        position: absolute;
+        top: calc(100% + 8px);
+        right: 0;
+        z-index: 1500;
+        min-width: 190px;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 6px;
+        padding: 8px;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 10px;
+        box-shadow: 0 12px 30px rgba(8, 20, 38, 0.18);
+    }
+
+    .header-menu.open .header-menu-panel {
+        display: flex;
+    }
+
+    .app-header .header-menu-panel .secondary-button {
+        justify-content: flex-start;
+        width: 100%;
+        padding: 10px 12px;
+        background: transparent;
+        color: var(--color-text);
+        border: none;
+        text-align: left;
+    }
+
+    .app-header .header-menu-panel .secondary-button:hover {
+        background: var(--color-surface-hover);
+        color: var(--color-primary-900);
+    }
+
+    /* V2.0.1a r3: en escritorio el periodo se centra en todo el espacio
+       disponible entre la flecha anterior y el selector de vista. */
+    .calendar-controls .calendar-title-container {
+        justify-self: center;
+        justify-content: center;
+    }
+}
+
+/* En móvil conservamos exactamente la composición aprobada. */
+@media (max-width: 800px) {
+    .header-overview {
+        display: flex;
+    }
+}
+
+/* ================================
+   V2.0.1a-r4 — TRUE DESKTOP PERIOD CENTERING
+================================ */
+
+@media (min-width: 801px) {
+    /*
+       El título del periodo se centra respecto al ancho completo de la vista,
+       independientemente de las flechas o del selector Calendario/Tabla.
+       Los controles laterales conservan su posición y jerarquía.
+    */
+    .calendar-controls {
+        position: relative;
+    }
+
+    .calendar-controls .calendar-title-container {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        width: 100%;
+        padding: 0 22px;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        grid-column: 2;
+        justify-self: center;
+        margin: 0;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        grid-column: 3;
+        justify-self: start;
+        margin-left: 12px;
+        pointer-events: auto;
+    }
+
+    .calendar-controls #previousMonthButton,
+    .calendar-controls #nextMonthButton,
+    .calendar-controls .view-switch {
+        position: relative;
+        z-index: 2;
+    }
+}
+
+/* ================================
+   V2.0.1a-r5 — EXACT DESKTOP TITLE CENTER
+================================ */
+@media (min-width: 801px) {
+    /*
+       El mes/año queda anclado al centro geométrico de toda la barra.
+       El botón Hoy se coloca a su derecha sin participar en el centrado.
+    */
+    .calendar-controls {
+        position: relative;
+    }
+
+    .calendar-controls .calendar-title-container {
+        position: static;
+        display: contents;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        width: max-content;
+        text-align: center;
+        white-space: nowrap;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        position: absolute;
+        left: calc(50% + 88px);
+        top: 50%;
+        transform: translateY(-50%);
+        margin: 0;
+        z-index: 2;
+        pointer-events: auto;
+    }
+
+    .calendar-controls #previousMonthButton,
+    .calendar-controls #nextMonthButton,
+    .calendar-controls .view-switch {
+        position: relative;
+        z-index: 3;
+    }
+}
+
+/* ================================
+   V2.0.1a-r6 — DESKTOP MONTH BAR FIX
+================================ */
+@media (min-width: 801px) {
+    /*
+       El título permanece en el centro geométrico de la barra.
+       "Hoy" vuelve al flujo normal y ocupa su propio espacio a la derecha,
+       evitando que se superponga con Calendario/Tabla.
+    */
+    .calendar-controls {
+        position: relative;
+        grid-template-columns: auto minmax(0, 1fr) auto auto auto;
+        grid-template-areas: "previous period today views next";
+    }
+
+    .calendar-controls .calendar-title-container {
+        display: contents;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        width: max-content;
+        text-align: center;
+        white-space: nowrap;
+        z-index: 1;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        position: static;
+        grid-area: today;
+        justify-self: end;
+        align-self: center;
+        transform: none;
+        margin: 0;
+        z-index: 3;
+        pointer-events: auto;
+    }
+
+    .calendar-controls .view-switch {
+        grid-area: views;
+    }
+}
+
+/* ================================
+   V2.0.1a-r7 — DESKTOP MONTH BAR REFINEMENT
+================================ */
+@media (min-width: 1101px) {
+    /*
+       Mes/año + Hoy forman una sola unidad visual centrada.
+       El selector de vista permanece a la derecha y no altera ese centrado.
+    */
+    .calendar-controls {
+        position: relative;
+        grid-template-columns: auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "previous period views next";
+    }
+
+    .calendar-controls .calendar-title-container {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        width: max-content;
+        max-width: calc(100% - 520px);
+        z-index: 2;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        position: static;
+        transform: none;
+        margin: 0;
+        width: auto;
+        max-width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        position: static;
+        transform: none;
+        margin: 0;
+        flex: 0 0 auto;
+        pointer-events: auto;
+    }
+
+    .calendar-controls #previousMonthButton,
+    .calendar-controls #nextMonthButton,
+    .calendar-controls .view-switch {
+        position: relative;
+        z-index: 3;
+    }
+}
+
+/*
+   Cuando el ancho ya no permite mantener título y selector cómodamente
+   en una sola fila, la barra adopta la composición móvil antes de que
+   los elementos lleguen a tocarse.
+*/
+@media (min-width: 801px) and (max-width: 1100px) {
+    .calendar-controls {
+        position: relative;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-areas:
+            "views views views"
+            "previous period next";
+        gap: 10px 10px;
+        padding: 12px 18px 14px;
+    }
+
+    .calendar-controls .view-switch {
+        grid-area: views;
+        justify-self: center;
+        width: min(430px, 100%);
+    }
+
+    .calendar-controls .calendar-title-container {
+        position: static;
+        transform: none;
+        grid-area: period;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        justify-self: center;
+        pointer-events: auto;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        position: static;
+        transform: none;
+        margin: 0;
+        width: auto;
+        max-width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        position: static;
+        transform: none;
+        grid-area: auto;
+        margin: 0;
+        flex: 0 0 auto;
+        pointer-events: auto;
+    }
+}
+
+/* ================================
+   V2.0.1a-r8 — MONTH/TODAY COLLISION FIX
+================================ */
+/*
+   Mes/año y Hoy son una sola unidad inseparable. El título no puede
+   desbordarse por detrás del botón y el botón nunca se posiciona encima
+   del texto, incluso en anchos intermedios.
+*/
+@media (min-width: 801px) {
+    .calendar-controls .calendar-title-container {
+        align-items: center;
+        justify-content: center;
+        column-gap: 12px;
+        width: max-content;
+        min-width: max-content;
+        white-space: nowrap;
+    }
+
+    .calendar-controls .calendar-title-container h2 {
+        flex: 0 0 auto;
+        min-width: 0;
+        max-width: none;
+        overflow: visible;
+        white-space: nowrap;
+    }
+
+    .calendar-controls .calendar-title-container .secondary-button {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
+}
+
+@media (min-width: 801px) and (max-width: 1100px) {
+    .calendar-controls .calendar-title-container {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        transform: none !important;
+        display: inline-flex !important;
+        grid-area: period;
+        justify-self: center;
+        width: max-content;
+        min-width: max-content;
+        max-width: none;
+        pointer-events: auto;
+    }
+
+    .calendar-controls .calendar-title-container h2,
+    .calendar-controls .calendar-title-container .secondary-button {
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
+        transform: none !important;
+    }
+}
+
+
+/* ================================
+   V2.0.1b — VISTA TABLA MENSUAL
+================================ */
+.monthly-table {
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-top: none;
+    background: var(--color-surface);
+}
+
+.monthly-table-header,
+.monthly-table-row {
+    display: grid;
+    grid-template-columns: 64px 120px minmax(220px, 1fr) 150px 165px;
+    align-items: stretch;
+}
+
+.monthly-table-header {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    min-height: 42px;
+    background: var(--color-primary-700);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+.monthly-table-header > div,
+.monthly-table-row > div {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 10px 12px;
+    border-right: 1px solid var(--color-border);
+}
+
+.monthly-table-header > div:last-child,
+.monthly-table-row > div:last-child {
+    border-right: none;
+}
+
+.monthly-table-body {
+    width: 100%;
+}
+
+.monthly-table-row {
+    min-height: 54px;
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.monthly-table-row:last-child {
+    border-bottom: none;
+}
+
+.monthly-table-row:hover {
+    background: var(--color-surface-hover);
+}
+
+.monthly-table-row.weekend {
+    background: rgba(88, 126, 168, 0.055);
+}
+
+.monthly-table-row.weekend:hover {
+    background: rgba(88, 126, 168, 0.095);
+}
+
+.monthly-table-row.continuation-row {
+    min-height: 46px;
+    border-top: 1px dashed rgba(127, 145, 164, 0.28);
+}
+
+.monthly-table-day {
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--color-primary-900);
+}
+
+.monthly-table-weekday {
+    font-size: 0.87rem;
+    font-weight: 650;
+    color: var(--color-text);
+}
+
+.monthly-table-movement {
+    overflow: hidden;
+}
+
+.monthly-table-movement-line {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    width: 100%;
+}
+
+.monthly-table-movement-line .movement-color-dot {
+    flex: 0 0 auto;
+}
+
+.monthly-table-movement-line.scheduled {
+    opacity: 0.72;
+}
+
+.monthly-table-movement-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.2;
+}
+
+.monthly-table-description {
+    overflow: hidden;
+    color: var(--color-text);
+    font-size: 0.89rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.monthly-table-movement-meta {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 0.72rem;
+    font-weight: 550;
+}
+
+.monthly-table-money {
+    justify-content: flex-end;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.9rem;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+.monthly-table-money.balance-positive {
+    color: var(--color-success, #198754);
+}
+
+.monthly-table-money.balance-negative {
+    color: var(--color-danger, #c53b3b);
+}
+
+.monthly-table-money.projected-balance {
+    font-style: italic;
+}
+
+@media (max-width: 800px) {
+    .monthly-table {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .monthly-table-header,
+    .monthly-table-row {
+        grid-template-columns: 42px 67px minmax(126px, 1fr) 92px 105px;
+        min-width: 432px;
+    }
+
+    .monthly-table-header {
+        font-size: 0.62rem;
+    }
+
+    .monthly-table-header > div,
+    .monthly-table-row > div {
+        padding: 8px 6px;
+    }
+
+    .monthly-table-weekday {
+        overflow: hidden;
+        font-size: 0.7rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .monthly-table-description {
+        font-size: 0.75rem;
+    }
+
+    .monthly-table-movement-meta {
+        font-size: 0.62rem;
+    }
+
+    .monthly-table-money {
+        font-size: 0.72rem;
+    }
+
+    .monthly-table-row {
+        min-height: 50px;
+    }
+}
+
+
+/* ================================
+   V2.0.2a - CONFIGURACIÓN / NÓMINA
+================================ */
+
+.settings-section {
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid rgba(30, 77, 123, 0.14);
+}
+
+.settings-section-header h3 {
+    margin: 0 0 6px;
+}
+
+.settings-section-header p {
+    margin: 0 0 18px;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.settings-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.payroll-weekend-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin: 4px 0 18px;
+}
+
+.payroll-weekend-options .field-label {
+    width: 100%;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.payroll-weekend-options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+}
+
+.payroll-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.payroll-rule-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px;
+    border: 1px solid rgba(30, 77, 123, 0.14);
+    border-radius: 12px;
+    background: rgba(30, 77, 123, 0.035);
+}
+
+.payroll-rule-copy {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.payroll-rule-copy strong {
+    font-size: 14px;
+}
+
+.payroll-rule-copy span {
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.payroll-rule-copy small,
+.payroll-empty-state {
+    color: var(--color-text-muted);
+    font-size: 12px;
+}
+
+.payroll-rule-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 560px) {
+    .settings-form-grid {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .payroll-rule-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .payroll-rule-actions {
+        width: 100%;
+    }
+
+    .payroll-rule-actions button {
+        flex: 1;
+    }
+}
