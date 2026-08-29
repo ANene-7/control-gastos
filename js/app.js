@@ -1319,7 +1319,7 @@ function initializeScheduledMovementModal() {
                     completedDateInput.value;
 
 
-                if (!movementDateValue) {
+                if (!completedDate) {
 
                     throw new Error(
                         "Debes indicar la fecha realizada."
@@ -3068,7 +3068,7 @@ function initializeEditMovementModal() {
                 }
 
 
-                if (!completedDate) {
+                if (!movementDateValue) {
 
                     throw new Error(
                         "Debes seleccionar una fecha."
