@@ -909,28 +909,56 @@ export function calculateProjectedBalance(
 
 
     /*
-        Partimos del saldo REAL
-        disponible hoy.
+        Elegimos el punto de partida de la proyección.
+
+        Si la fecha del saldo inicial ya ocurrió,
+        partimos del saldo REAL disponible hoy.
+
+        Si el saldo inicial está fechado en el futuro,
+        ese saldo funciona como ancla de la proyección.
+        Así la app puede prepararse con anticipación y
+        calcular desde la fecha elegida, aunque todavía
+        no haya llegado.
     */
 
-    const currentRealBalance =
-        calculateDailyBalance(
-            today,
-            movements
-        ).accumulatedBalance;
+    const initialBalanceDate =
+        settings.initialBalanceDate;
 
 
-    if (
-        currentRealBalance === null
-    ) {
+    const startsInFuture =
+        initialBalanceDate > today;
 
-        return null;
+
+    let projectedBalance;
+
+
+    if (startsInFuture) {
+
+        projectedBalance =
+            settings.initialBalance;
+
+    } else {
+
+        const currentRealBalance =
+            calculateDailyBalance(
+                today,
+                movements
+            ).accumulatedBalance;
+
+
+        if (
+            currentRealBalance === null
+        ) {
+
+            return null;
+
+        }
+
+
+        projectedBalance =
+            currentRealBalance;
 
     }
-
-
-    let projectedBalance =
-        currentRealBalance;
 
 
     /*
@@ -960,21 +988,47 @@ export function calculateProjectedBalance(
             .map(Number);
 
 
-    const cursor =
-        new Date();
+    let cursor;
 
 
-    cursor.setHours(
-        0,
-        0,
-        0,
-        0
-    );
+    if (startsInFuture) {
+
+        const [
+            initialYear,
+            initialMonth,
+            initialDay
+        ] =
+            initialBalanceDate
+                .split("-")
+                .map(Number);
 
 
-    cursor.setDate(
-        cursor.getDate() + 1
-    );
+        cursor =
+            new Date(
+                initialYear,
+                initialMonth - 1,
+                initialDay
+            );
+
+    } else {
+
+        cursor =
+            new Date();
+
+
+        cursor.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+
+        cursor.setDate(
+            cursor.getDate() + 1
+        );
+
+    }
 
 
     const target =
