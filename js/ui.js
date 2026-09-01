@@ -1034,7 +1034,7 @@ export async function initializeUI(settings) {
 
 
                 link.download =
-                    `control-gastos-respaldo-${date}.json`;
+                    `cauce-respaldo-${date}.json`;
 
 
                 document.body.appendChild(
@@ -1136,7 +1136,7 @@ export async function initializeUI(settings) {
                 ) {
 
                     throw new Error(
-                        "El archivo no corresponde a un respaldo de Control de Gastos."
+                        "El archivo no corresponde a un respaldo compatible con Cauce."
                     );
 
                 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "control-gastos-v21";
+const CACHE_NAME = "cauce-v22";
 
 
 const APP_FILES = [
@@ -12,6 +12,7 @@ const APP_FILES = [
 
     "./assets/icons/icon-192.png",
     "./assets/icons/icon-512.png",
+    "./assets/branding/cauce-flowline-sora-reverse-accent.svg",
 
     "./js/app.js",
     "./js/state.js",

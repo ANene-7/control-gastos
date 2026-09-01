@@ -1,7 +1,7 @@
 {
-    "name": "Control de Gastos",
-    "short_name": "Gastos",
-    "description": "Control personal de ingresos, gastos, créditos y proyecciones financieras.",
+    "name": "Cauce",
+    "short_name": "Cauce",
+    "description": "Cauce: control personal de ingresos, gastos, créditos y proyecciones financieras.",
     "start_url": "./",
     "scope": "./",
     "display": "standalone",
@@ -9,7 +9,6 @@
     "theme_color": "#ffffff",
     "lang": "es-MX",
     "orientation": "any",
-
     "icons": [
         {
             "src": "./assets/icons/icon-192.png",

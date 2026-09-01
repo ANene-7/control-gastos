@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">Ícono claro de la app Cauce</title>
+  <desc id="desc">Flowline azul oscuro y azul brillante sobre fondo blanco.</desc>
+  <rect width="512" height="512" rx="112" fill="#FFFFFF"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M70 238 C135 250 174 319 268 286" stroke="#173B63" stroke-width="14"/>
+    <path d="M268 286 C326 276 357 203 430 185" stroke="#3B82F6" stroke-width="14"/>
+    <path d="M268 224 V254 M268 320 V351" stroke="#173B63" stroke-width="8"/>
+    <circle cx="70" cy="238" r="22" fill="#173B63" stroke="none"/>
+    <circle cx="268" cy="286" r="22" fill="#173B63" stroke="none"/>
+    <circle cx="430" cy="185" r="22" fill="#3B82F6" stroke="none"/>
+  </g>
+</svg>

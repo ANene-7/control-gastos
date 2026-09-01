@@ -315,7 +315,7 @@ export async function showDeviceNotification(
 export async function sendTestNotification() {
 
     return showDeviceNotification(
-        "Control de Gastos",
+        "Cauce",
         {
             body:
                 "Las notificaciones están listas en este dispositivo.",
