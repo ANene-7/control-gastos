@@ -14,6 +14,7 @@ import {
 
 import {
     saveRecord,
+    getRecord,
     getAllRecords,
     deleteRecord,
     clearStore,
@@ -24,6 +25,37 @@ import {
 import {
     setSettings
 } from "./state.js";
+
+import {
+    createCreditFromSetup,
+    updateCreditFromSetup
+} from "./creditSetupService.js";
+
+import {
+    calculateCurrentDebt,
+    calculateAvailableCredit,
+    calculateObligationRemaining
+} from "./creditModelCalculations.js";
+
+import {
+    getCreditProjectionMovements
+} from "./creditProjection.js";
+
+import {
+    registerPurchaseWithMovement,
+    registerPayment,
+    registerInterest,
+    registerFee,
+    registerRefund
+} from "./creditService.js";
+
+import {
+    createEntity
+} from "./repository.js";
+
+import {
+    prepareCreditPayment
+} from "./creditPaymentFlow.js";
 
 import {
     getNotificationCapability,
@@ -359,6 +391,26 @@ export async function initializeUI(settings) {
     const creditForm =
         document.getElementById(
             "creditForm"
+        );
+
+    const creditFormModal =
+        document.getElementById(
+            "creditFormModal"
+        );
+
+    const creditFormModalTitle =
+        document.getElementById(
+            "creditFormModalTitle"
+        );
+
+    const openCreditFormModalButton =
+        document.getElementById(
+            "openCreditFormModalButton"
+        );
+
+    const closeCreditFormModalButton =
+        document.getElementById(
+            "closeCreditFormModalButton"
         );
 
     const creditsList =
@@ -945,10 +997,11 @@ export async function initializeUI(settings) {
         DATOS Y RESPALDO
         =================================
 
-        El respaldo V2 incluye todos los
-        almacenes financieros actuales.
-        Conservamos compatibilidad con los
-        respaldos V1 generados anteriormente.
+        El respaldo V3 incluye tanto el núcleo
+        actual como las nuevas entidades del
+        modelo de créditos. La compatibilidad
+        temporal con stores V2 se mantiene
+        mientras sus pantallas son sustituidas.
     */
 
     const BACKUP_STORES = [
@@ -956,6 +1009,10 @@ export async function initializeUI(settings) {
         "movements",
         "credits",
         "recurringRules",
+        "creditOperations",
+        "creditPeriods",
+        "creditObligations",
+        "creditPlans",
         "creditAdjustments"
     ];
 
@@ -981,10 +1038,10 @@ export async function initializeUI(settings) {
                 const backup = {
 
                     app:
-                        "Control de Gastos",
+                        "Cauce",
 
                     version:
-                        2,
+                        3,
 
                     exportedAt:
                         new Date()
@@ -1190,6 +1247,34 @@ export async function initializeUI(settings) {
                             backup.data.recurringRules
                         )
                             ? backup.data.recurringRules
+                            : [],
+
+                    creditOperations:
+                        Array.isArray(
+                            backup.data.creditOperations
+                        )
+                            ? backup.data.creditOperations
+                            : [],
+
+                    creditPeriods:
+                        Array.isArray(
+                            backup.data.creditPeriods
+                        )
+                            ? backup.data.creditPeriods
+                            : [],
+
+                    creditObligations:
+                        Array.isArray(
+                            backup.data.creditObligations
+                        )
+                            ? backup.data.creditObligations
+                            : [],
+
+                    creditPlans:
+                        Array.isArray(
+                            backup.data.creditPlans
+                        )
+                            ? backup.data.creditPlans
                             : [],
 
                     creditAdjustments:
@@ -1426,37 +1511,43 @@ export async function initializeUI(settings) {
     closeCreditsModalButton.addEventListener(
         "click",
         () => {
-
-            editingCreditId =
-                null;
-
-
-            creditForm.reset();
-
-
             creditsModal.classList.add(
                 "hidden"
             );
-
         }
+    );
+
+
+    const closeCreditFormModal = () => {
+        editingCreditId = null;
+        creditFormModal.classList.add("hidden");
+        creditForm.reset();
+        if (creditInitialDebt) creditInitialDebt.disabled = false;
+        if (creditInitialDebtDate) creditInitialDebtDate.disabled = false;
+        if (creditInitialDebt) creditInitialDebt.value = "0";
+        if (creditNextPaymentAmount) creditNextPaymentAmount.value = "0";
+        refreshCreditSetupForm();
+    };
+
+
+    closeCreditFormModalButton?.addEventListener(
+        "click",
+        closeCreditFormModal
     );
 
 
     cancelCreditButton.addEventListener(
         "click",
-        () => {
-
-            editingCreditId =
-                null;
+        closeCreditFormModal
+    );
 
 
-            creditForm.reset();
-
-
-            creditsModal.classList.add(
-                "hidden"
-            );
-
+    creditFormModal?.addEventListener(
+        "click",
+        event => {
+            if (event.target === creditFormModal) {
+                closeCreditFormModal();
+            }
         }
     );
 
@@ -1496,220 +1587,197 @@ export async function initializeUI(settings) {
         Guardar crédito.
     */
 
+    const creditTypeField = document.getElementById("creditType");
+    const creditCardFields = document.getElementById("creditCardFields");
+    const creditInitialDebt = document.getElementById("creditInitialDebt");
+    const creditInitialDebtDateGroup = document.getElementById("creditInitialDebtDateGroup");
+    const creditInitialDebtDate = document.getElementById("creditInitialDebtDate");
+    const creditNextPaymentSection = document.getElementById("creditNextPaymentSection");
+    const creditNextPaymentAmount = document.getElementById("creditNextPaymentAmount");
+    const creditNextPaymentDateGroup = document.getElementById("creditNextPaymentDateGroup");
+    const creditNextPaymentDate = document.getElementById("creditNextPaymentDate");
+    const creditDebtSplitSummary = document.getElementById("creditDebtSplitSummary");
+    const creditRemainingSection = document.getElementById("creditRemainingSection");
+    const creditRemainingLabel = document.getElementById("creditRemainingLabel");
+    const creditRemainingMode = document.getElementById("creditRemainingMode");
+    const creditPlanFields = document.getElementById("creditPlanFields");
+    const creditInstallmentCountGroup = document.getElementById("creditInstallmentCountGroup");
+    const creditInstallmentAmountGroup = document.getElementById("creditInstallmentAmountGroup");
+    const creditPlanSummary = document.getElementById("creditPlanSummary");
+
+    const refreshCreditSetupForm = () => {
+        const type = creditTypeField?.value;
+        const isCard = type === "credit_card";
+        creditCardFields?.classList.toggle("hidden", !isCard);
+
+        const debt = Math.max(0, Number(creditInitialDebt?.value) || 0);
+        creditInitialDebtDateGroup?.classList.toggle("hidden", debt <= 0);
+        creditNextPaymentSection?.classList.toggle("hidden", debt <= 0);
+
+        const nextPayment = Math.max(0, Number(creditNextPaymentAmount?.value) || 0);
+        creditNextPaymentDateGroup?.classList.toggle("hidden", nextPayment <= 0);
+
+        const remaining = Math.max(0, debt - Math.min(nextPayment, debt));
+        creditRemainingSection?.classList.toggle("hidden", remaining <= 0);
+        if (creditRemainingLabel) {
+            creditRemainingLabel.textContent = remaining > 0
+                ? `Después del próximo pago quedarían ${formatCurrency(remaining)} por gestionar.`
+                : "";
+        }
+        if (creditDebtSplitSummary) {
+            creditDebtSplitSummary.innerHTML = debt > 0
+                ? `Deuda actual: <strong>${formatCurrency(debt)}</strong><br>Próximo pago: <strong>${formatCurrency(Math.min(nextPayment, debt))}</strong><br>Saldo posterior: <strong>${formatCurrency(remaining)}</strong>`
+                : "";
+        }
+
+        const mode = creditRemainingMode?.value || "manual";
+        const hasPlan = remaining > 0 && mode !== "manual";
+        creditPlanFields?.classList.toggle("hidden", !hasPlan);
+        creditInstallmentCountGroup?.classList.toggle("hidden", mode !== "installments");
+        creditInstallmentAmountGroup?.classList.toggle("hidden", mode !== "fixed_amount");
+
+        if (creditPlanSummary) {
+            if (!hasPlan) {
+                creditPlanSummary.innerHTML = "";
+            } else if (mode === "installments") {
+                const count = Math.max(0, Number(document.getElementById("creditInstallmentCount")?.value) || 0);
+                creditPlanSummary.innerHTML = count > 0
+                    ? `${count} pagos aproximados de <strong>${formatCurrency(remaining / count)}</strong>. El último absorberá cualquier diferencia de redondeo.`
+                    : "Indica cuántos pagos quieres crear.";
+            } else {
+                const amount = Math.max(0, Number(document.getElementById("creditInstallmentAmount")?.value) || 0);
+                const count = amount > 0 ? Math.ceil(remaining / amount) : 0;
+                creditPlanSummary.innerHTML = count > 0
+                    ? `${count} pagos estimados. El último será de hasta <strong>${formatCurrency(remaining - amount * Math.max(0, count - 1))}</strong>.`
+                    : "Indica cuánto quieres pagar en cada periodo.";
+            }
+        }
+    };
+
+    [
+        creditTypeField,
+        creditInitialDebt,
+        creditNextPaymentAmount,
+        creditRemainingMode,
+        document.getElementById("creditInstallmentCount"),
+        document.getElementById("creditInstallmentAmount")
+    ].forEach(element => {
+        element?.addEventListener("input", refreshCreditSetupForm);
+        element?.addEventListener("change", refreshCreditSetupForm);
+    });
+
+    refreshCreditSetupForm();
+
+    openCreditFormModalButton?.addEventListener("click", () => {
+        editingCreditId = null;
+        creditForm.reset();
+        if (creditInitialDebt) {
+            creditInitialDebt.disabled = false;
+            creditInitialDebt.value = "0";
+        }
+        if (creditInitialDebtDate) creditInitialDebtDate.disabled = false;
+        if (creditNextPaymentAmount) creditNextPaymentAmount.value = "0";
+        if (creditFormModalTitle) creditFormModalTitle.textContent = "Agregar crédito";
+        refreshCreditSetupForm();
+        creditsModal.classList.add("hidden");
+        creditFormModal.classList.remove("hidden");
+    });
+
+    const beginEditCredit = async creditId => {
+        const [storedCredits, storedObligations, storedPlans, creditOperations] = await Promise.all([
+            getAllRecords("credits"),
+            getAllRecords("creditObligations"),
+            getAllRecords("creditPlans"),
+            getAllRecords("creditOperations")
+        ]);
+        const rawCredit = storedCredits.find(item => String(item.id) === String(creditId));
+        if (!rawCredit) return;
+        const setupObligation = storedObligations.find(item => String(item.creditId) === String(creditId) && item.source === "initial_setup");
+        const setupPlan = storedPlans.find(item => String(item.creditId) === String(creditId) && item.sourceType === "initial_debt" && item.status === "active");
+        const hasOperations = creditOperations.some(item => String(item.creditId) === String(creditId));
+
+        editingCreditId = rawCredit.id;
+        document.getElementById("creditName").value = rawCredit.name || "";
+        creditTypeField.value = rawCredit.type || "other";
+        document.getElementById("creditLimit").value = rawCredit.limit ?? "";
+        document.getElementById("creditClosingDay").value = rawCredit.cutDay ?? "";
+        document.getElementById("creditPaymentDueDay").value = rawCredit.dueDay ?? "";
+        creditInitialDebt.value = Number(rawCredit.initialDebt || 0);
+        creditInitialDebt.disabled = hasOperations;
+        creditInitialDebtDate.value = rawCredit.initialDebtDate || "";
+        creditInitialDebtDate.disabled = hasOperations;
+        creditNextPaymentAmount.value = Number(setupObligation?.originalAmount || 0);
+        creditNextPaymentDate.value = setupObligation?.dueDate || "";
+        creditRemainingMode.value = setupPlan?.mode || "manual";
+        document.getElementById("creditInstallmentCount").value = setupPlan?.installmentCount ?? "";
+        document.getElementById("creditInstallmentAmount").value = setupPlan?.installmentAmount ?? "";
+        document.getElementById("creditPlanFrequency").value = setupPlan?.frequency || "monthly";
+        document.getElementById("creditPlanFirstDueDate").value = setupPlan?.firstDueDate || "";
+        document.getElementById("creditNotes").value = rawCredit.notes || "";
+        refreshCreditSetupForm();
+        if (creditFormModalTitle) creditFormModalTitle.textContent = "Editar crédito";
+        creditDetailModal.classList.add("hidden");
+        creditsModal.classList.add("hidden");
+        creditFormModal.classList.remove("hidden");
+    };
+
+    const deactivateCreditById = async creditId => {
+        const storedCredits = await getAllRecords("credits");
+        const rawCredit = storedCredits.find(item => String(item.id) === String(creditId));
+        if (!rawCredit) return;
+        const confirmed = await showConfirmDialog({
+            title: "Cancelar crédito",
+            message: `¿Deseas mover "${rawCredit.name}" a créditos inactivos? Su historial y movimientos se conservarán.`,
+            confirmText: "Cancelar crédito",
+            cancelText: "Volver"
+        });
+        if (!confirmed) return;
+        await saveRecord("credits", { ...rawCredit, active: false, deactivatedAt: new Date().toISOString() });
+        creditDetailModal.classList.add("hidden");
+        await loadCredits(creditSelector, creditPaymentSelector, creditsList, inactiveCreditsList);
+        showNotification(`Crédito ${rawCredit.name} movido a inactivos.`);
+    };
+
+    window.addEventListener("creditEditRequested", event => beginEditCredit(event.detail?.creditId));
+    window.addEventListener("creditDeactivateRequested", event => deactivateCreditById(event.detail?.creditId));
+
     creditForm.addEventListener(
         "submit",
         async event => {
-
             event.preventDefault();
 
-
             try {
-
-                const name =
-                    document
-                        .getElementById(
-                            "creditName"
-                        )
-                        .value
-                        .trim();
-
-
-                const type =
-                    document
-                        .getElementById(
-                            "creditType"
-                        )
-                        .value;
-
-
-                const creditLimit =
-                    Number(
-                        document
-                            .getElementById(
-                                "creditLimit"
-                            )
-                            .value
-                    );
-
-
-                const closingDay =
-                    Number(
-                        document
-                            .getElementById(
-                                "creditClosingDay"
-                            )
-                            .value
-                    );
-
-
-                const paymentDueDay =
-                    Number(
-                        document
-                            .getElementById(
-                                "creditPaymentDueDay"
-                            )
-                            .value
-                    );
-
-
-                /*
-                    Validaciones adicionales.
-                */
-
-                if (!name) {
-
-                    throw new Error(
-                        "Debes indicar un nombre para el crédito."
-                    );
-
-                }
-
-
-                if (
-                    creditLimit < 0
-                ) {
-
-                    throw new Error(
-                        "El límite de crédito no puede ser negativo."
-                    );
-
-                }
-
-
-                if (
-                    closingDay < 1 ||
-                    closingDay > 31
-                ) {
-
-                    throw new Error(
-                        "El día de corte debe estar entre 1 y 31."
-                    );
-
-                }
-
-
-                if (
-                    paymentDueDay < 1 ||
-                    paymentDueDay > 31
-                ) {
-
-                    throw new Error(
-                        "La fecha límite de pago debe estar entre 1 y 31."
-                    );
-
-                }
-
-
-                /*
-                    Crear objeto del crédito.
-                */
-
-                let credit;
-
-
-                /*
-                    Si estamos editando,
-                    conservar el mismo ID.
-                */
-
-                if (
-                    editingCreditId
-                ) {
-
-                    const existingCredits =
-                        await getAllRecords(
-                            "credits"
-                        );
-
-
-                    const existingCredit =
-                        existingCredits.find(
-                            item =>
-                                item.id ===
-                                editingCreditId
-                        );
-
-
-                    if (!existingCredit) {
-
-                        throw new Error(
-                            "No se encontró el crédito que deseas editar."
-                        );
-
-                    }
-
-
-                    credit = {
-
-                        ...existingCredit,
-
-                        name,
-
-                        type,
-
-                        creditLimit,
-
-                        closingDay,
-
-                        paymentDueDay,
-
-                        updatedAt:
-                            new Date()
-                                .toISOString()
-
-                    };
-
-                } else {
-
-                    credit = {
-
-                        id:
-                            crypto.randomUUID(),
-
-                        name,
-
-                        type,
-
-                        creditLimit,
-
-                        closingDay,
-
-                        paymentDueDay,
-
-                        active:
-                            true,
-
-                        createdAt:
-                            new Date()
-                                .toISOString()
-
-                    };
-
-                }
-
-
-                /*
-                    Guardar en IndexedDB.
-                */
-
-                await saveRecord(
-                    "credits",
-                    credit
-                );
-
-                editingCreditId =
-                    null;
-
-                /*
-                    Limpiar formulario.
-                */
-
+                const today = getLocalDateString();
+                const setupPayload = {
+                    name: document.getElementById("creditName").value,
+                    type: creditTypeField.value,
+                    limit: document.getElementById("creditLimit")?.value ?? null,
+                    cutDay: document.getElementById("creditClosingDay")?.value ?? null,
+                    dueDay: document.getElementById("creditPaymentDueDay")?.value ?? null,
+                    initialDebt: creditInitialDebt?.value || 0,
+                    initialDebtDate: creditInitialDebtDate?.value || null,
+                    nextPaymentAmount: creditNextPaymentAmount?.value || 0,
+                    nextPaymentDate: creditNextPaymentDate?.value || null,
+                    remainingMode: creditRemainingMode?.value || "manual",
+                    installmentCount: document.getElementById("creditInstallmentCount")?.value || null,
+                    installmentAmount: document.getElementById("creditInstallmentAmount")?.value || null,
+                    planFrequency: document.getElementById("creditPlanFrequency")?.value || "monthly",
+                    planFirstDueDate: document.getElementById("creditPlanFirstDueDate")?.value || null,
+                    notes: document.getElementById("creditNotes")?.value || "",
+                    referenceDate: today
+                };
+
+                const credit = editingCreditId
+                    ? await updateCreditFromSetup(editingCreditId, setupPayload)
+                    : await createCreditFromSetup(setupPayload);
+
+                editingCreditId = null;
                 creditForm.reset();
-
-
-                /*
-                    Actualizar lista y selector.
-                */
+                creditInitialDebt.disabled = false;
+                creditInitialDebtDate.disabled = false;
+                if (creditInitialDebt) creditInitialDebt.value = "0";
+                if (creditNextPaymentAmount) creditNextPaymentAmount.value = "0";
+                refreshCreditSetupForm();
 
                 await loadCredits(
                     creditSelector,
@@ -1718,32 +1786,16 @@ export async function initializeUI(settings) {
                     inactiveCreditsList
                 );
 
-
-                creditsModal.classList.add(
-                    "hidden"
-                );
-
-
-                showNotification(
-                    "Crédito guardado correctamente."
-                );
+                creditFormModal.classList.add("hidden");
+                if (creditFormModalTitle) creditFormModalTitle.textContent = "Agregar crédito";
+                window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
+                showNotification(`Crédito ${credit.name} guardado correctamente.`);
 
             } catch (error) {
-
-                console.error(
-                    "No se pudo guardar el crédito:",
-                    error
-                );
-
-
-                showNotification(
-                    error.message ||
-                    "No se pudo guardar el crédito.",
-                    "error"
-                );
-
+                console.error("No se pudo guardar el crédito V3:", error);
+                showNotification(error.message || "No se pudo guardar el crédito.", "error");
             }
-
         }
     );
 
@@ -2025,10 +2077,12 @@ export async function initializeUI(settings) {
                         "click",
                         async () => {
 
-                            const confirmed =
-                                confirm(
-                                    `¿Eliminar la programación de ${rule.description || "esta nómina"}? Los movimientos ya realizados no se eliminarán.`
-                                );
+                            const confirmed = await showConfirmDialog({
+                                title: "Eliminar programación de nómina",
+                                message: `¿Eliminar la programación de ${rule.description || "esta nómina"}? Los movimientos ya realizados no se eliminarán.`,
+                                confirmText: "Eliminar",
+                                cancelText: "Cancelar"
+                            });
 
                             if (!confirmed) {
                                 return;
@@ -2148,9 +2202,12 @@ export async function initializeUI(settings) {
             });
 
             item.querySelector(".fixed-delete-button").addEventListener("click", async () => {
-                const confirmed = window.confirm(
-                    `¿Eliminar la programación de ${rule.description || "este movimiento"}? Los movimientos ya realizados no se eliminarán.`
-                );
+                const confirmed = await showConfirmDialog({
+                    title: "Eliminar programación",
+                    message: `¿Eliminar la programación de ${rule.description || "este movimiento"}? Los movimientos ya realizados no se eliminarán.`,
+                    confirmText: "Eliminar",
+                    cancelText: "Cancelar"
+                });
 
                 if (!confirmed) {
                     return;
@@ -2575,6 +2632,115 @@ export async function initializeUI(settings) {
         inactiveCreditsList
     );
 
+    window.addEventListener(
+        "creditDataChanged",
+        async () => {
+            await loadCredits(
+                creditSelector,
+                creditPaymentSelector,
+                creditsList,
+                inactiveCreditsList
+            );
+            await renderCalendar();
+        }
+    );
+
+    const openCreditDetailById = async ({ creditId } = {}) => {
+        if (creditId === null || creditId === undefined || creditId === "") return false;
+
+        let credit = await getRecord("credits", creditId);
+
+        if (!credit) {
+            const credits = await getAllRecords("credits");
+            credit = credits.find(item => String(item.id) === String(creditId)) || null;
+        }
+
+        if (!credit) {
+            console.warn("No se encontró el crédito solicitado:", creditId);
+            return false;
+        }
+
+        await renderCreditDetail(
+            credit,
+            [],
+            [],
+            creditDetailModal,
+            creditDetailTitle,
+            creditDetailSubtitle,
+            creditDetailContent
+        );
+
+        return true;
+    };
+
+    const openCreditPaymentById = async ({
+        creditId,
+        amount = null,
+        date = null,
+        obligationId = null,
+        planId = null
+    } = {}) => {
+        if (creditId === null || creditId === undefined || creditId === "") return false;
+
+        let credit = await getRecord("credits", creditId);
+
+        if (!credit) {
+            const credits = await getAllRecords("credits");
+            credit = credits.find(item => String(item.id) === String(creditId)) || null;
+        }
+
+        if (!credit) {
+            console.warn("No se encontró el crédito solicitado para registrar el abono:", creditId);
+            return false;
+        }
+
+        if (credit.__isV3 || ["credit_card", "loan", "other"].includes(credit.type)) {
+            await renderCreditDetailV3(
+                credit,
+                creditDetailModal,
+                creditDetailTitle,
+                creditDetailSubtitle,
+                creditDetailContent,
+                {
+                    quickAction: "payment",
+                    amount,
+                    date,
+                    obligationId,
+                    planId
+                }
+            );
+        } else {
+            await renderCreditDetail(
+                credit,
+                [],
+                [],
+                creditDetailModal,
+                creditDetailTitle,
+                creditDetailSubtitle,
+                creditDetailContent
+            );
+        }
+
+        return true;
+    };
+
+    /*
+        Ruta directa compartida por Calendario, detalle del día y Pendientes.
+        Evita que una diferencia de tipo en el ID deje un crédito inaccesible.
+    */
+    window.cauceOpenCreditDetail = openCreditDetailById;
+    window.cauceOpenCreditPayment = openCreditPaymentById;
+
+    window.addEventListener(
+        "openCreditDetailById",
+        event => openCreditDetailById(event.detail)
+    );
+
+    window.addEventListener(
+        "openCreditPaymentById",
+        event => openCreditPaymentById(event.detail)
+    );
+
 }
 
 
@@ -2599,13 +2765,21 @@ async function updateMonthlyDashboard(
             "credits"
         );
 
+    const creditProjectionMovements =
+        await getCreditProjectionMovements();
+
+    const displayMovements =
+        movements.concat(creditProjectionMovements);
+
+    const legacyCredits =
+        credits.filter(credit => !["credit_card", "loan", "other"].includes(credit.type));
 
     const summary =
         calculateMonthlySummary(
             year,
             month,
-            movements,
-            credits
+            displayMovements,
+            legacyCredits
         );
 
 
@@ -2613,8 +2787,8 @@ async function updateMonthlyDashboard(
         calculateMonthlyMinimumBalance(
             year,
             month,
-            movements,
-            credits
+            displayMovements,
+            legacyCredits
         );
 
 
@@ -3179,10 +3353,12 @@ function calculateRegisteredCreditUsage(
 
 
     const used =
-        Math.max(
-            0,
-            purchases - payments
-        );
+        Number.isFinite(credit.__v3Debt)
+            ? credit.__v3Debt
+            : Math.max(
+                0,
+                purchases - payments
+            );
 
 
     const limit =
@@ -3263,7 +3439,337 @@ function getNextPendingCreditObligation(
 
 
 
-function renderCreditDetail(
+
+async function renderCreditDetailV3(
+    credit,
+    modal,
+    titleElement,
+    subtitleElement,
+    contentElement,
+    options = {}
+) {
+    const creditId = String(credit.id);
+    const [storedCredits, operations, obligations, plans, periods, projections] = await Promise.all([
+        getAllRecords("credits"),
+        getAllRecords("creditOperations"),
+        getAllRecords("creditObligations"),
+        getAllRecords("creditPlans"),
+        getAllRecords("creditPeriods"),
+        getCreditProjectionMovements()
+    ]);
+
+    const rawCredit = storedCredits.find(item => String(item.id) === creditId) || credit;
+    const debt = calculateCurrentDebt(rawCredit, operations);
+    const available = calculateAvailableCredit(rawCredit, operations);
+    const creditOperations = operations
+        .filter(item => String(item.creditId) === creditId)
+        .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+    const creditObligations = obligations
+        .filter(item => String(item.creditId) === creditId)
+        .map(item => ({
+            ...item,
+            pendingAmount: calculateObligationRemaining(item, operations)
+        }))
+        .filter(item => item.pendingAmount > 0.005)
+        .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")));
+    const creditPlans = plans
+        .filter(item => String(item.creditId) === creditId && item.status === "active");
+    const creditProjections = projections
+        .filter(item => String(item.creditId) === creditId && Number(item.amount) > 0)
+        .sort((a, b) => String(a.scheduledDate || "").localeCompare(String(b.scheduledDate || "")));
+    const firstProjectionDate = creditProjections[0]?.scheduledDate || null;
+    const nextProjection = firstProjectionDate
+        ? {
+            scheduledDate: firstProjectionDate,
+            amount: creditProjections
+                .filter(item => item.scheduledDate === firstProjectionDate)
+                .reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+        }
+        : null;
+    const currentPeriod = periods
+        .filter(item => String(item.creditId) === creditId && item.status === "open")
+        .sort((a, b) => String(a.endDate || "").localeCompare(String(b.endDate || "")))[0] || null;
+
+    const typeLabel = rawCredit.type === "credit_card"
+        ? "Tarjeta de crédito"
+        : rawCredit.type === "loan"
+            ? "Préstamo / crédito con saldo"
+            : "Otro crédito";
+
+    titleElement.textContent = rawCredit.name || "Crédito";
+    subtitleElement.textContent = rawCredit.type === "credit_card"
+        ? `${typeLabel} · Corte día ${rawCredit.cutDay || "—"} · Fecha límite día ${rawCredit.dueDay || "—"}`
+        : typeLabel;
+    contentElement.innerHTML = "";
+
+    const managementActions = document.createElement("div");
+    managementActions.classList.add("credit-detail-management-actions");
+    const editCreditButton = document.createElement("button");
+    editCreditButton.type = "button";
+    editCreditButton.classList.add("secondary-button");
+    editCreditButton.textContent = "Editar crédito";
+    editCreditButton.addEventListener("click", () => window.dispatchEvent(new CustomEvent("creditEditRequested", { detail: { creditId: rawCredit.id } })));
+    const deactivateCreditButton = document.createElement("button");
+    deactivateCreditButton.type = "button";
+    deactivateCreditButton.classList.add("secondary-button");
+    deactivateCreditButton.textContent = "Cancelar crédito";
+    deactivateCreditButton.addEventListener("click", () => window.dispatchEvent(new CustomEvent("creditDeactivateRequested", { detail: { creditId: rawCredit.id } })));
+    managementActions.append(editCreditButton, deactivateCreditButton);
+    contentElement.appendChild(managementActions);
+
+    const summary = document.createElement("div");
+    summary.classList.add("credit-detail-summary");
+    summary.innerHTML = `
+        <div><span>Deuda actual</span><strong>${formatCurrency(debt)}</strong></div>
+        <div><span>Disponible</span><strong>${available === null ? "—" : formatCurrency(available)}</strong></div>
+        <div><span>Límite</span><strong>${rawCredit.limit === null || rawCredit.limit === undefined ? "—" : formatCurrency(Number(rawCredit.limit) || 0)}</strong></div>
+        <div>
+            <span>Próximo pago</span>
+            <strong>${nextProjection ? formatCurrency(Number(nextProjection.amount) || 0) : "Sin definir"}</strong>
+            ${nextProjection ? `<small>${formatShortDate(String(nextProjection.scheduledDate))}</small>` : ""}
+        </div>
+    `;
+    contentElement.appendChild(summary);
+
+    const actions = document.createElement("div");
+    actions.classList.add("credit-detail-actions");
+    const actionDefs = [
+        ["purchase", "Registrar compra"],
+        ["payment", "Registrar abono"],
+        ["interest", "Interés"],
+        ["fee", "Comisión"],
+        ["refund", "Bonificación"]
+    ];
+    actionDefs.forEach(([kind, label]) => {
+        if (kind === "purchase" && rawCredit.type !== "credit_card") return;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.classList.add(kind === "payment" ? "primary-button" : "secondary-button");
+        button.textContent = label;
+        button.addEventListener("click", () => showQuickForm(kind));
+        actions.appendChild(button);
+    });
+    contentElement.appendChild(actions);
+
+    const quickHost = document.createElement("div");
+    quickHost.classList.add("credit-detail-quick-host");
+    contentElement.appendChild(quickHost);
+
+    function showQuickForm(kind, preset = {}) {
+        const labels = {
+            purchase: "Registrar compra",
+            payment: "Registrar abono",
+            interest: "Registrar interés",
+            fee: "Registrar comisión",
+            refund: "Registrar bonificación"
+        };
+        const defaults = {
+            purchase: "Compra con crédito",
+            payment: `Pago a ${rawCredit.name || "crédito"}`,
+            interest: "Intereses del periodo",
+            fee: "Comisión",
+            refund: "Bonificación"
+        };
+        const nextObligation = creditObligations[0] || null;
+        const nextPaymentProjection = creditProjections[0] || null;
+        const nextPlanId = nextPaymentProjection?.projectionSourceType === "plan" ? nextPaymentProjection.projectionSourceId : null;
+        quickHost.innerHTML = `
+            <section class="credit-detail-section credit-quick-form">
+                <div class="credit-detail-section-heading"><h3>${labels[kind]}</h3></div>
+                <div class="form-grid">
+                    <label>Monto
+                        <input id="creditQuickAmount" type="number" min="0.01" step="0.01" inputmode="decimal" value="${preset.amount ?? ""}">
+                    </label>
+                    <label>Fecha
+                        <input id="creditQuickDate" type="date" value="${preset.date || getLocalDateString()}">
+                    </label>
+                    <label class="full-width">Descripción
+                        <input id="creditQuickDescription" type="text" value="${defaults[kind]}">
+                    </label>
+                </div>
+                ${kind === "payment" && nextObligation ? `
+                    <p class="credit-detail-note">Pago pendiente más próximo: ${formatCurrency(nextObligation.pendingAmount)} · ${formatShortDate(String(nextObligation.dueDate))}.</p>
+                ` : ""}
+                <div class="credit-list-actions">
+                    <button type="button" class="primary-button" id="creditQuickSave">Guardar</button>
+                    <button type="button" class="secondary-button" id="creditQuickCancel">Cancelar</button>
+                </div>
+            </section>
+        `;
+        quickHost.querySelector("#creditQuickCancel")?.addEventListener("click", () => { quickHost.innerHTML = ""; });
+        quickHost.querySelector("#creditQuickSave")?.addEventListener("click", async () => {
+            const amount = Number(quickHost.querySelector("#creditQuickAmount")?.value || 0);
+            const date = quickHost.querySelector("#creditQuickDate")?.value;
+            const description = quickHost.querySelector("#creditQuickDescription")?.value?.trim() || defaults[kind];
+            if (!Number.isFinite(amount) || amount <= 0 || !date) {
+                alert("Captura un monto y una fecha válidos.");
+                return;
+            }
+            try {
+                if (kind === "purchase") {
+                    const movement = createEntity({
+                        type: "expense",
+                        amount,
+                        description,
+                        paymentMethod: "credit",
+                        purpose: "regular",
+                        creditId: rawCredit.id,
+                        status: "completed",
+                        scheduledDate: null,
+                        completedDate: date,
+                        recurrence: null,
+                        category: "Compras",
+                        labelColor: "red"
+                    });
+                    await registerPurchaseWithMovement({
+                        creditId: rawCredit.id,
+                        amount,
+                        date,
+                        description,
+                        categoryId: "Compras",
+                        movement
+                    });
+                } else if (kind === "interest") {
+                    await registerInterest({ creditId: rawCredit.id, amount, date, description });
+                } else if (kind === "fee") {
+                    await registerFee({ creditId: rawCredit.id, amount, date, description });
+                } else if (kind === "refund") {
+                    await registerRefund({ creditId: rawCredit.id, amount, date, description });
+                } else if (kind === "payment") {
+                    const movement = createEntity({
+                        type: "expense",
+                        amount,
+                        description,
+                        paymentMethod: "debit",
+                        purpose: "creditPayment",
+                        creditId: rawCredit.id,
+                        status: "completed",
+                        scheduledDate: date,
+                        completedDate: date,
+                        category: "Deudas / créditos",
+                        labelColor: "red"
+                    });
+                    const paymentOptions = await prepareCreditPayment({
+                        creditId: rawCredit.id,
+                        amount
+                    });
+
+                    if (!paymentOptions) {
+                        return;
+                    }
+
+                    await registerPayment({
+                        creditId: rawCredit.id,
+                        amount,
+                        date,
+                        description,
+                        obligationId: preset.obligationId || nextObligation?.id || null,
+                        planId: preset.planId || (nextObligation ? null : nextPlanId),
+                        movement,
+                        ...paymentOptions
+                    });
+                }
+                window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
+                await renderCreditDetailV3(rawCredit, modal, titleElement, subtitleElement, contentElement);
+            } catch (error) {
+                console.error(error);
+                alert(error?.message || "No se pudo registrar la operación.");
+            }
+        });
+    }
+
+    if (options.quickAction === "payment") {
+        showQuickForm("payment", {
+            amount: options.amount,
+            date: options.date,
+            obligationId: options.obligationId || null,
+            planId: options.planId || null
+        });
+
+        requestAnimationFrame(() => {
+            quickHost.querySelector("#creditQuickAmount")?.focus();
+        });
+    }
+
+    if (currentPeriod) {
+        const periodOps = creditOperations.filter(item => String(item.periodId || "") === String(currentPeriod.id));
+        const periodTotal = periodOps.reduce((total, operation) => {
+            const amount = Number(operation.amount) || 0;
+            if (["purchase", "interest", "fee"].includes(operation.type)) return total + amount;
+            if (operation.type === "refund") return total - amount;
+            if (operation.type === "adjustment") return total + (operation.direction === "decrease" ? -amount : operation.direction === "increase" ? amount : 0);
+            return total;
+        }, 0);
+        const periodSection = document.createElement("section");
+        periodSection.classList.add("credit-detail-section");
+        periodSection.innerHTML = `
+            <div class="credit-detail-section-heading"><h3>Periodo actual</h3></div>
+            <div class="credit-detail-summary">
+                <div><span>Periodo</span><strong>${formatShortDate(currentPeriod.startDate)} → ${formatShortDate(currentPeriod.endDate)}</strong></div>
+                <div><span>Acumulado</span><strong>${formatCurrency(Math.max(0, periodTotal))}</strong></div>
+                <div><span>Fecha límite</span><strong>${currentPeriod.dueDate ? formatShortDate(currentPeriod.dueDate) : "—"}</strong></div>
+            </div>
+        `;
+        contentElement.appendChild(periodSection);
+    }
+
+    const createListSection = (heading, items, renderer, emptyText) => {
+        const section = document.createElement("section");
+        section.classList.add("credit-detail-section");
+        const header = document.createElement("div");
+        header.classList.add("credit-detail-section-heading");
+        header.innerHTML = `<h3>${heading}</h3><span>${items.length}</span>`;
+        section.appendChild(header);
+        if (!items.length) {
+            const empty = document.createElement("p");
+            empty.classList.add("credit-detail-empty");
+            empty.textContent = emptyText;
+            section.appendChild(empty);
+        } else {
+            const list = document.createElement("div");
+            list.classList.add("credit-detail-list");
+            items.forEach(item => list.appendChild(renderer(item)));
+            section.appendChild(list);
+        }
+        contentElement.appendChild(section);
+    };
+
+    createListSection("Próximos pagos", creditProjections.slice(0, 12), item => {
+        const row = document.createElement("div");
+        row.classList.add("credit-detail-row", "credit-detail-obligation-row");
+        row.innerHTML = `<div><strong>${formatShortDate(String(item.scheduledDate))}</strong><span>${item.projectionSourceType === "plan" ? "Cuota de plan" : "Obligación"}</span></div><strong>${formatCurrency(Number(item.amount) || 0)}</strong>`;
+        return row;
+    }, "No hay pagos futuros programados.");
+
+    createListSection("Planes activos", creditPlans, plan => {
+        const row = document.createElement("div");
+        row.classList.add("credit-detail-row");
+        const mode = plan.mode === "fixed_amount" ? "Monto fijo" : "Número de pagos";
+        row.innerHTML = `<div><strong>${mode}</strong><span>${plan.frequency || "monthly"} · inicio ${plan.firstDueDate ? formatShortDate(plan.firstDueDate) : "—"}</span></div><strong>${formatCurrency(Number(plan.originalAmount) || 0)}</strong>`;
+        return row;
+    }, "No hay planes activos.");
+
+    const operationLabels = {
+        purchase: "Compra",
+        payment: "Abono",
+        interest: "Interés",
+        fee: "Comisión",
+        refund: "Bonificación",
+        adjustment: "Ajuste"
+    };
+    createListSection("Actividad reciente", creditOperations.slice(0, 30), operation => {
+        const row = document.createElement("div");
+        row.classList.add("credit-detail-row");
+        const decreases = ["payment", "refund"].includes(operation.type) || (operation.type === "adjustment" && operation.direction === "decrease");
+        row.innerHTML = `<div><strong>${operation.description || operationLabels[operation.type] || "Operación"}</strong><span>${operationLabels[operation.type] || operation.type} · ${formatShortDate(String(operation.date))}</span></div><strong class="${decreases ? "credit-detail-payment-amount" : "credit-detail-purchase-amount"}">${decreases ? "−" : "+"}${formatCurrency(Number(operation.amount) || 0)}</strong>`;
+        return row;
+    }, "Todavía no hay operaciones registradas.");
+
+    modal.classList.remove("hidden");
+}
+
+async function renderCreditDetail(
     credit,
     movements = [],
     obligations = [],
@@ -3272,6 +3778,16 @@ function renderCreditDetail(
     subtitleElement,
     contentElement
 ) {
+
+    if (credit.__isV3 || ["credit_card", "loan", "other"].includes(credit.type)) {
+        return renderCreditDetailV3(
+            credit,
+            modal,
+            titleElement,
+            subtitleElement,
+            contentElement
+        );
+    }
 
     const creditId =
         String(
@@ -3284,7 +3800,9 @@ function renderCreditDetail(
             ? "Tarjeta de crédito"
             : credit.type === "storeCredit"
                 ? "Crédito de tienda"
-                : "Otro crédito";
+                : credit.type === "loan"
+                    ? "Préstamo / crédito con saldo"
+                    : "Otro crédito";
 
 
     const usage =
@@ -3815,51 +4333,47 @@ async function loadCredits(
         Obtener créditos registrados.
     */
 
-    const credits =
-        await getAllRecords(
-            "credits"
-        );
-
-
-    /*
-        Los datos de uso se calculan únicamente
-        con movimientos registrados en la app.
-        La gestión de deuda previa queda para V3.
-    */
-
-    const movements =
-        await getAllRecords(
-            "movements"
-        );
-
+    const storedCredits = await getAllRecords("credits");
+    const movements = await getAllRecords("movements");
+    const creditOperations = await getAllRecords("creditOperations");
+    const storedObligations = await getAllRecords("creditObligations");
+    const storedPlans = await getAllRecords("creditPlans");
+    const creditProjectionMovements = await getCreditProjectionMovements();
 
     /*
-        Las obligaciones se calculan una sola vez
-        para toda la pantalla de créditos. Si algún
-        registro antiguo resultara inconsistente,
-        el panel sigue funcionando sin bloquear la app.
+        La pantalla V2 todavía consume algunos nombres antiguos.
+        Los adaptamos sólo en memoria; IndexedDB conserva el modelo V3
+        como fuente de verdad.
     */
+    const credits = storedCredits.map(credit => {
+        const isV3 = ["credit_card", "loan", "other"].includes(credit.type);
+        const debt = isV3
+            ? calculateCurrentDebt(credit, creditOperations)
+            : null;
+        const available = isV3
+            ? calculateAvailableCredit(credit, creditOperations)
+            : null;
 
-    let creditObligations =
-        [];
+        return {
+            ...credit,
+            creditLimit: credit.limit ?? credit.creditLimit ?? null,
+            closingDay: credit.cutDay ?? credit.closingDay ?? null,
+            paymentDueDay: credit.dueDay ?? credit.paymentDueDay ?? null,
+            type: credit.type === "credit_card"
+                ? "creditCard"
+                : credit.type === "loan"
+                    ? "loan"
+                    : credit.type,
+            __v3Debt: debt,
+            __v3Available: available,
+            __isV3: isV3
+        };
+    });
 
-
-    try {
-
-        creditObligations =
-            calculateCreditObligations(
-                movements,
-                credits
-            );
-
-    } catch (error) {
-
-        console.error(
-            "No se pudieron calcular las obligaciones de crédito:",
-            error
-        );
-
-    }
+    const creditObligations = storedObligations.map(obligation => ({
+        ...obligation,
+        pendingAmount: calculateObligationRemaining(obligation, creditOperations)
+    }));
 
 
     /*
@@ -4086,9 +4600,11 @@ async function loadCredits(
                 const creditTypeLabel =
                     credit.type === "creditCard"
                         ? "Tarjeta de crédito"
-                        : credit.type === "storeCredit"
-                            ? "Crédito de tienda"
-                            : "Otro crédito";
+                        : credit.type === "loan"
+                            ? "Préstamo / crédito con saldo"
+                            : credit.type === "storeCredit"
+                                ? "Crédito de tienda"
+                                : "Otro crédito";
 
 
                 const usage =
@@ -4098,11 +4614,21 @@ async function loadCredits(
                     );
 
 
-                const nextObligation =
-                    getNextPendingCreditObligation(
-                        credit,
-                        creditObligations
-                    );
+                const creditProjectionsForCard = creditProjectionMovements
+                    .filter(item =>
+                        String(item.creditId) === String(credit.id) &&
+                        Number(item.amount) > 0
+                    )
+                    .sort((a, b) => String(a.scheduledDate || "").localeCompare(String(b.scheduledDate || "")));
+
+                const nextProjectionDate = creditProjectionsForCard[0]?.scheduledDate || null;
+                const nextObligation = nextProjectionDate ? {
+                    pendingAmount: creditProjectionsForCard
+                        .filter(item => item.scheduledDate === nextProjectionDate)
+                        .reduce((sum, item) => sum + (Number(item.amount) || 0), 0),
+                    dueDate: nextProjectionDate,
+                    __fromProjection: true
+                } : null;
 
 
                 const today =
@@ -4163,11 +4689,9 @@ async function loadCredits(
                         <div class="credit-usage-values">
 
                             <div>
-                                <span>Uso registrado</span>
+                                <span>Deuda actual</span>
                                 <strong>
-                                    ${formatCurrency(
-                                        usage.used
-                                    )}
+                                    ${formatCurrency(usage.used)}
                                 </strong>
                             </div>
 
@@ -4179,6 +4703,15 @@ async function loadCredits(
                                         : formatCurrency(
                                             usage.available
                                         )}
+                                </strong>
+                            </div>
+
+                            <div>
+                                <span>Límite</span>
+                                <strong>
+                                    ${credit.creditLimit === null || credit.creditLimit === undefined
+                                        ? "—"
+                                        : formatCurrency(credit.creditLimit)}
                                 </strong>
                             </div>
 
@@ -4195,7 +4728,7 @@ async function loadCredits(
                         </div>
 
                         <small>
-                            Estimación basada sólo en compras y pagos registrados en esta app.
+                            Calculado desde la deuda inicial y las operaciones registradas en Cauce.
                         </small>
 
                     </div>
@@ -4233,313 +4766,33 @@ async function loadCredits(
                             `}
                     </div>
 
-                    <div class="credit-list-data credit-list-data-grid">
-
-                        <div class="credit-data-block">
-                            <span>Límite</span>
-                            <strong>
-                                ${formatCurrency(
-                                    credit.creditLimit
-                                )}
-                            </strong>
-                        </div>
-
-                        <div class="credit-data-block">
-                            <span>Corte</span>
-                            <strong>
-                                Día ${credit.closingDay}
-                            </strong>
-                        </div>
-
-                        <div class="credit-data-block">
-                            <span>Fecha límite</span>
-                            <strong>
-                                Día ${credit.paymentDueDay}
-                            </strong>
-                        </div>
-
+                    <div class="credit-list-data credit-list-meta">
+                        <div><span>Corte:</span> <strong>${credit.closingDay ? `Día ${credit.closingDay}` : "—"}</strong></div>
+                        <div><span>FLP:</span> <strong>${credit.paymentDueDay ? `Día ${credit.paymentDueDay}` : "—"}</strong></div>
                     </div>
                 `;
 
 
-                const actions =
-                    document.createElement(
-                        "div"
+                const actions = document.createElement("div");
+                actions.classList.add("credit-list-actions");
+
+                const detailButton = document.createElement("button");
+                detailButton.type = "button";
+                detailButton.classList.add("secondary-button");
+                detailButton.textContent = "Ver detalle";
+                detailButton.addEventListener("click", () => {
+                    renderCreditDetail(
+                        credit,
+                        movements,
+                        creditObligations,
+                        creditDetailModal,
+                        creditDetailTitle,
+                        creditDetailSubtitle,
+                        creditDetailContent
                     );
-
-
-                actions.classList.add(
-                    "credit-list-actions"
-                );
-
-
-                const detailButton =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                detailButton.type =
-                    "button";
-
-
-                detailButton.classList.add(
-                    "secondary-button"
-                );
-
-
-                detailButton.textContent =
-                    "Ver detalle";
-
-
-                const editButton =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                editButton.type =
-                    "button";
-
-
-                editButton.classList.add(
-                    "secondary-button"
-                );
-
-
-                editButton.textContent =
-                    "Editar";
-
-
-                const deactivateButton =
-                    document.createElement(
-                        "button"
-                    );
-
-
-                deactivateButton.type =
-                    "button";
-
-
-                deactivateButton.classList.add(
-                    "secondary-button"
-                );
-
-
-                deactivateButton.textContent =
-                    "Cancelar crédito";
-
-
-                /*
-                    VER DETALLE
-                */
-
-                detailButton.addEventListener(
-                    "click",
-                    () => {
-
-                        renderCreditDetail(
-                            credit,
-                            movements,
-                            creditObligations,
-                            creditDetailModal,
-                            creditDetailTitle,
-                            creditDetailSubtitle,
-                            creditDetailContent
-                        );
-
-                    }
-                );
-
-
-                /*
-                    EDITAR
-                */
-
-                editButton.addEventListener(
-                    "click",
-                    () => {
-
-                        editingCreditId =
-                            credit.id;
-
-
-                        document
-                            .getElementById(
-                                "creditName"
-                            )
-                            .value =
-                                credit.name;
-
-
-                        document
-                            .getElementById(
-                                "creditType"
-                            )
-                            .value =
-                                credit.type;
-
-
-                        document
-                            .getElementById(
-                                "creditLimit"
-                            )
-                            .value =
-                                credit.creditLimit;
-
-
-                        document
-                            .getElementById(
-                                "creditClosingDay"
-                            )
-                            .value =
-                                credit.closingDay;
-
-
-                        document
-                            .getElementById(
-                                "creditPaymentDueDay"
-                            )
-                            .value =
-                                credit.paymentDueDay;
-
-
-                        creditForm.scrollIntoView({
-                            behavior:
-                                "smooth",
-
-                            block:
-                                "start"
-                        });
-
-                    }
-                );
-
-
-                /*
-                    DESACTIVAR
-                */
-
-                deactivateButton.addEventListener(
-                    "click",
-                    async () => {
-
-                        try {
-
-                            const confirmed =
-                                await showConfirmDialog({
-
-                                    title:
-                                        "Cancelar crédito",
-
-                                    message:
-                                        `¿Deseas mover "${credit.name}" ` +
-                                        `a créditos inactivos? ` +
-                                        `Su historial y movimientos se conservarán.`,
-
-                                    confirmText:
-                                        "Cancelar crédito",
-
-                                    cancelText:
-                                        "Volver"
-
-                                });
-
-
-                            if (!confirmed) {
-
-                                return;
-
-                            }
-
-
-                            const updatedCredit = {
-
-                                ...credit,
-
-                                active:
-                                    false,
-
-                                deactivatedAt:
-                                    new Date()
-                                        .toISOString()
-
-                            };
-
-
-                            await saveRecord(
-                                "credits",
-                                updatedCredit
-                            );
-
-
-                            if (
-                                editingCreditId ===
-                                credit.id
-                            ) {
-
-                                editingCreditId =
-                                    null;
-
-
-                                creditForm.reset();
-
-                            }
-
-
-                            await loadCredits(
-                                creditSelector,
-                                creditPaymentSelector,
-                                creditsList,
-                                inactiveCreditsList
-                            );
-
-
-                            showNotification(
-                                "Crédito movido a inactivos."
-                            );
-
-
-                            await renderCalendar();
-
-
-                        } catch (error) {
-
-                            console.error(
-                                "No se pudo cancelar el crédito:",
-                                error
-                            );
-
-
-                            showNotification(
-                                "No se pudo cancelar el crédito.",
-                                "error"
-                            );
-
-                        }
-
-                    }
-                );
-
-
-                actions.appendChild(
-                    detailButton
-                );
-
-
-                actions.appendChild(
-                    editButton
-                );
-
-
-                actions.appendChild(
-                    deactivateButton
-                );
-
-
-                item.appendChild(
-                    actions
-                );
+                });
+                actions.appendChild(detailButton);
+                item.appendChild(actions);
 
 
                 creditsList.appendChild(
@@ -4889,6 +5142,65 @@ function getLocalDateString() {
 
     return `${year}-${month}-${day}`;
 
+}
+
+
+export function showDatePromptDialog({
+    title = "Seleccionar fecha",
+    message = "Selecciona una nueva fecha.",
+    value = "",
+    confirmText = "Aceptar",
+    cancelText = "Cancelar"
+} = {}) {
+
+    return new Promise(resolve => {
+        const modal = document.getElementById("datePromptModal");
+        const titleElement = document.getElementById("datePromptModalTitle");
+        const messageElement = document.getElementById("datePromptModalMessage");
+        const input = document.getElementById("datePromptModalInput");
+        const acceptButton = document.getElementById("acceptDatePromptButton");
+        const cancelButton = document.getElementById("cancelDatePromptButton");
+        const closeButton = document.getElementById("closeDatePromptModalButton");
+
+        if (!modal || !input || !acceptButton || !cancelButton || !closeButton) {
+            resolve(null);
+            return;
+        }
+
+        titleElement.textContent = title;
+        messageElement.textContent = message;
+        input.value = value || "";
+        acceptButton.textContent = confirmText;
+        cancelButton.textContent = cancelText;
+
+        function finish(result) {
+            modal.classList.add("hidden");
+            acceptButton.removeEventListener("click", accept);
+            cancelButton.removeEventListener("click", cancel);
+            closeButton.removeEventListener("click", cancel);
+            modal.removeEventListener("click", backdrop);
+            resolve(result);
+        }
+
+        function accept() {
+            const selected = input.value;
+            if (!selected) {
+                input.focus();
+                return;
+            }
+            finish(selected);
+        }
+
+        function cancel() { finish(null); }
+        function backdrop(event) { if (event.target === modal) cancel(); }
+
+        acceptButton.addEventListener("click", accept);
+        cancelButton.addEventListener("click", cancel);
+        closeButton.addEventListener("click", cancel);
+        modal.addEventListener("click", backdrop);
+        modal.classList.remove("hidden");
+        requestAnimationFrame(() => input.focus());
+    });
 }
 
 

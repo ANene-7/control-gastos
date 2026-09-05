@@ -1,4 +1,4 @@
-const CACHE_NAME = "cauce-v22";
+const CACHE_NAME = "cauce-v45";
 
 
 const APP_FILES = [
@@ -17,6 +17,16 @@ const APP_FILES = [
     "./js/app.js",
     "./js/state.js",
     "./js/database.js",
+    "./js/repository.js",
+    "./js/creditService.js",
+    "./js/creditSetupService.js",
+    "./js/creditProjection.js",
+    "./js/creditPaymentFlow.js",
+    "./js/pendingService.js",
+    "./js/pendingUI.js",
+    "./js/feedbackUI.js",
+    "./js/creditPeriods.js",
+    "./js/creditModelCalculations.js",
     "./js/ui.js",
     "./js/calendar.js",
     "./js/calculations.js",
@@ -113,54 +123,45 @@ self.addEventListener(
     PETICIONES
     =================================
 
-    Intentamos utilizar primero
-    los archivos guardados localmente.
+    Para navegación, JS, CSS y manifest intentamos primero la red.
+    Esto evita mezclar una versión nueva del HTML con módulos antiguos
+    que todavía existan en caché. Si no hay conexión, usamos el caché.
 
-    Si no existen en caché,
-    acudimos a la red.
+    Para imágenes y demás recursos estáticos usamos caché primero.
 */
-
 self.addEventListener(
     "fetch",
     event => {
+        if (event.request.method !== "GET") return;
 
-        if (
-            event.request.method !==
-            "GET"
-        ) {
+        const url = new URL(event.request.url);
+        const isAppCode =
+            event.request.mode === "navigate" ||
+            ["script", "style", "manifest"].includes(event.request.destination) ||
+            url.pathname.endsWith(".js") ||
+            url.pathname.endsWith(".css") ||
+            url.pathname.endsWith(".webmanifest") ||
+            url.pathname.endsWith(".html");
 
+        if (isAppCode) {
+            event.respondWith(
+                fetch(event.request)
+                    .then(response => {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME)
+                            .then(cache => cache.put(event.request, copy))
+                            .catch(() => {});
+                        return response;
+                    })
+                    .catch(() => caches.match(event.request))
+            );
             return;
-
         }
 
-
         event.respondWith(
-
-            caches
-                .match(
-                    event.request
-                )
-                .then(
-                    cachedResponse => {
-
-                        if (
-                            cachedResponse
-                        ) {
-
-                            return cachedResponse;
-
-                        }
-
-
-                        return fetch(
-                            event.request
-                        );
-
-                    }
-                )
-
+            caches.match(event.request)
+                .then(cached => cached || fetch(event.request))
         );
-
     }
 );
 

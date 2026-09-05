@@ -38,6 +38,32 @@ import {
     checkDueNotifications
 } from "./notifications.js";
 
+import {
+    registerPurchaseWithMovement,
+    registerPayment,
+    deleteCreditLinkedMovement
+} from "./creditService.js";
+
+import {
+    ensureAllCreditPeriodsUpToDate
+} from "./creditPeriods.js";
+
+import {
+    prepareCreditPayment
+} from "./creditPaymentFlow.js";
+
+import {
+    initializePendingUI
+} from "./pendingUI.js";
+
+import {
+    initializeFeedbackUI
+} from "./feedbackUI.js";
+
+import {
+    getCreditProjectionMovements
+} from "./creditProjection.js";
+
 
 function getCategorySuggestedColor(category) {
     const colors = {
@@ -474,7 +500,11 @@ function initializeMovementForm() {
 
             try {
 
-                await saveMovement();
+                const savedMovement = await saveMovement();
+
+                if (!savedMovement) {
+                    return;
+                }
 
 
                 /*
@@ -544,6 +574,10 @@ function initializeMovementForm() {
                     Actualizar calendario
                     una sola vez.
                 */
+
+                window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
 
                 await renderCalendar();
 
@@ -906,13 +940,58 @@ async function saveMovement() {
 
 
     /*
-        Guardar en IndexedDB.
+        Guardar usando el mismo motor V3 sin importar
+        desde qué formulario se originó la operación.
     */
 
-    await saveRecord(
-        "movements",
-        movement
-    );
+    if (
+        movement.status === "completed" &&
+        movement.type === "expense" &&
+        movement.paymentMethod === "credit" &&
+        movement.purpose !== "creditPayment" &&
+        movement.creditId
+    ) {
+        const result = await registerPurchaseWithMovement({
+            creditId: movement.creditId,
+            amount: movement.amount,
+            date: movement.completedDate,
+            description: movement.description,
+            categoryId: movement.category || null,
+            movement
+        });
+        Object.assign(movement, result.movement);
+
+    } else if (
+        movement.status === "completed" &&
+        movement.type === "expense" &&
+        movement.purpose === "creditPayment" &&
+        movement.creditId
+    ) {
+        const paymentOptions = await prepareCreditPayment({
+            creditId: movement.creditId,
+            amount: movement.amount
+        });
+
+        if (!paymentOptions) {
+            return null;
+        }
+
+        const result = await registerPayment({
+            creditId: movement.creditId,
+            amount: movement.amount,
+            date: movement.completedDate,
+            description: movement.description,
+            movement,
+            ...paymentOptions
+        });
+        Object.assign(movement, result.movement);
+
+    } else {
+        await saveRecord(
+            "movements",
+            movement
+        );
+    }
 
 
     console.log(
@@ -925,6 +1004,92 @@ async function saveMovement() {
 
 }
 
+
+
+function previousLocalDate(value) {
+    const date = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(date.getTime())) return null;
+    date.setDate(date.getDate() - 1);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function makeOccurrenceRecordId(prefix = "occ") {
+    return `${prefix}-${crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
+}
+
+function chooseRecurrenceScope({ action = "modificar", description = "este movimiento" } = {}) {
+    const modal = document.getElementById("recurrenceScopeModal");
+    const title = document.getElementById("recurrenceScopeTitle");
+    const message = document.getElementById("recurrenceScopeMessage");
+    const singleButton = document.getElementById("recurrenceScopeSingleButton");
+    const futureButton = document.getElementById("recurrenceScopeFutureButton");
+    const cancelButton = document.getElementById("recurrenceScopeCancelButton");
+    const closeButton = document.getElementById("closeRecurrenceScopeModalButton");
+
+    if (!modal || !singleButton || !futureButton) {
+        return Promise.resolve("single");
+    }
+
+    title.textContent = action === "eliminar" ? "Eliminar recurrencia" : "Editar recurrencia";
+    message.textContent = `¿Quieres ${action} sólo esta ocurrencia de “${description}” o ésta y todas las futuras?`;
+
+    return new Promise(resolve => {
+        const finish = value => {
+            modal.classList.add("hidden");
+            singleButton.onclick = null;
+            futureButton.onclick = null;
+            cancelButton.onclick = null;
+            closeButton.onclick = null;
+            resolve(value);
+        };
+        singleButton.onclick = () => finish("single");
+        futureButton.onclick = () => finish("future");
+        cancelButton.onclick = () => finish(null);
+        closeButton.onclick = () => finish(null);
+        modal.classList.remove("hidden");
+    });
+}
+
+async function createOccurrenceCancellation(rule, occurrenceDate) {
+    await saveRecord("movements", {
+        id: makeOccurrenceRecordId("mov-cancelled"),
+        status: "cancelled",
+        type: rule.type,
+        purpose: rule.purpose || "regular",
+        description: rule.description,
+        amount: Number(rule.amount) || 0,
+        paymentMethod: rule.paymentMethod || null,
+        creditId: rule.creditId || null,
+        scheduledDate: null,
+        completedDate: null,
+        recurrence: null,
+        sourceScheduledMovementId: rule.id,
+        sourceScheduledDate: occurrenceDate,
+        createdAt: new Date().toISOString()
+    });
+}
+
+async function endRecurringRuleBefore(rule, occurrenceDate) {
+    if (occurrenceDate <= rule.scheduledDate) {
+        await saveRecord("movements", {
+            ...rule,
+            status: "cancelled",
+            updatedAt: new Date().toISOString()
+        });
+        return;
+    }
+    await saveRecord("movements", {
+        ...rule,
+        recurrence: {
+            ...rule.recurrence,
+            endDate: previousLocalDate(occurrenceDate)
+        },
+        updatedAt: new Date().toISOString()
+    });
+}
 
 function initializeScheduledMovementModal() {
 
@@ -1042,7 +1207,7 @@ function initializeScheduledMovementModal() {
 
     editButton.addEventListener(
         "click",
-        () => {
+        async () => {
 
             if (!selectedMovement) {
 
@@ -1056,21 +1221,24 @@ function initializeScheduledMovementModal() {
             }
 
 
-            const movementId =
-                selectedMovement.id;
+            const movementId = selectedMovement.id;
+            const occurrenceDate = selectedOccurrenceDate;
+            let scope = "series";
 
+            if (selectedMovement.recurrence) {
+                scope = await chooseRecurrenceScope({
+                    action: "modificar",
+                    description: selectedMovement.description || "este movimiento"
+                });
+                if (!scope) return;
+            }
 
             closeModal();
-
 
             window.dispatchEvent(
                 new CustomEvent(
                     "openScheduledMovementForEdit",
-                    {
-                        detail: {
-                            movementId
-                        }
-                    }
+                    { detail: { movementId, occurrenceDate, scope } }
                 )
             );
 
@@ -1107,51 +1275,35 @@ function initializeScheduledMovementModal() {
                     null;
 
 
-                const confirmed =
-                    await showConfirmDialog({
-
-                        title:
-                            isRecurring
-                                ? "Eliminar programación"
-                                : "Eliminar movimiento programado",
-
-                        message:
-                            isRecurring
-                                ? `¿Deseas eliminar la programación recurrente "${selectedMovement.description}"? ` +
-                                `Se eliminarán sus ocurrencias pendientes futuras. ` +
-                                `Los movimientos que ya hayas marcado como realizados se conservarán.`
-                                : `¿Deseas eliminar "${selectedMovement.description}"? ` +
-                                `Esta acción no se puede deshacer.`,
-
-                        confirmText:
-                            "Eliminar",
-
-                        cancelText:
-                            "Cancelar"
-
+                if (isRecurring) {
+                    const scope = await chooseRecurrenceScope({
+                        action: "eliminar",
+                        description: selectedMovement.description || "este movimiento"
                     });
+                    if (!scope) return;
 
-
-                if (!confirmed) {
-
-                    return;
-
+                    if (scope === "single") {
+                        await createOccurrenceCancellation(selectedMovement, selectedOccurrenceDate);
+                    } else {
+                        const finalConfirmed = await showConfirmDialog({
+                            title: "Confirmar cancelación futura",
+                            message: `Se cancelará “${selectedMovement.description || "este movimiento"}” desde ${selectedOccurrenceDate} y también todas sus ocurrencias futuras. Los movimientos ya realizados se conservarán.`,
+                            confirmText: "Sí, cancelar futuras",
+                            cancelText: "No cancelar"
+                        });
+                        if (!finalConfirmed) return;
+                        await endRecurringRuleBefore(selectedMovement, selectedOccurrenceDate);
+                    }
+                } else {
+                    const confirmed = await showConfirmDialog({
+                        title: "Eliminar movimiento programado",
+                        message: `¿Deseas eliminar "${selectedMovement.description}"? Esta acción no se puede deshacer.`,
+                        confirmText: "Eliminar",
+                        cancelText: "Cancelar"
+                    });
+                    if (!confirmed) return;
+                    await deleteRecord("movements", selectedMovement.id);
                 }
-
-
-                /*
-                    Eliminamos la regla programada.
-
-                    Los movimientos realizados
-                    anteriormente son registros
-                    independientes, por lo que
-                    permanecen en la base de datos.
-                */
-
-                await deleteRecord(
-                    "movements",
-                    selectedMovement.id
-                );
 
 
                 closeModal();
@@ -1159,10 +1311,11 @@ function initializeScheduledMovementModal() {
 
                 showNotification(
                     isRecurring
-                        ? "Programación eliminada correctamente."
+                        ? "Recurrencia actualizada correctamente."
                         : "Movimiento programado eliminado correctamente."
                 );
 
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
 
                 /*
                     Actualizar interfaz.
@@ -1199,18 +1352,15 @@ function initializeScheduledMovementModal() {
         del calendario.
     */
 
-    window.addEventListener(
-        "openScheduledMovement",
-        async event => {
+    async function openScheduledMovementModal({ movementId, occurrenceDate } = {}) {
 
             try {
 
-                const {
-                    movementId,
-                    occurrenceDate
-                } =
-                    event.detail;
-
+                if (!movementId || !occurrenceDate) {
+                    throw new Error(
+                        "No se recibió la información del movimiento programado."
+                    );
+                }
 
                 selectedMovement =
                     await getRecord(
@@ -1218,6 +1368,16 @@ function initializeScheduledMovementModal() {
                         movementId
                     );
 
+                /*
+                    Respaldo defensivo para instalaciones donde el tipo
+                    del key haya cambiado entre versiones (p. ej. número/string).
+                */
+                if (!selectedMovement) {
+                    const allMovements = await getAllRecords("movements");
+                    selectedMovement = allMovements.find(
+                        movement => String(movement.id) === String(movementId)
+                    ) || null;
+                }
 
                 if (!selectedMovement) {
 
@@ -1289,6 +1449,16 @@ function initializeScheduledMovementModal() {
             }
 
         }
+
+    /*
+        Ruta directa compartida por Calendario y Pendientes.
+        El CustomEvent se conserva para compatibilidad con código anterior.
+    */
+    window.cauceOpenScheduledMovement = openScheduledMovementModal;
+
+    window.addEventListener(
+        "openScheduledMovement",
+        event => openScheduledMovementModal(event.detail)
     );
 
 
@@ -1385,10 +1555,46 @@ function initializeScheduledMovementModal() {
                 };
 
 
-                await saveRecord(
-                    "movements",
-                    completedMovement
-                );
+                if (
+                    completedMovement.type === "expense" &&
+                    completedMovement.paymentMethod === "credit" &&
+                    completedMovement.purpose !== "creditPayment" &&
+                    completedMovement.creditId
+                ) {
+                    const result = await registerPurchaseWithMovement({
+                        creditId: completedMovement.creditId,
+                        amount: completedMovement.amount,
+                        date: completedMovement.completedDate,
+                        description: completedMovement.description,
+                        categoryId: completedMovement.category || null,
+                        movement: completedMovement
+                    });
+                    Object.assign(completedMovement, result.movement);
+                } else if (
+                    completedMovement.type === "expense" &&
+                    completedMovement.purpose === "creditPayment" &&
+                    completedMovement.creditId
+                ) {
+                    const paymentOptions = await prepareCreditPayment({
+                        creditId: completedMovement.creditId,
+                        amount: completedMovement.amount
+                    });
+                    if (!paymentOptions) return;
+                    const result = await registerPayment({
+                        creditId: completedMovement.creditId,
+                        amount: completedMovement.amount,
+                        date: completedMovement.completedDate,
+                        description: completedMovement.description,
+                        movement: completedMovement,
+                        ...paymentOptions
+                    });
+                    Object.assign(completedMovement, result.movement);
+                } else {
+                    await saveRecord(
+                        "movements",
+                        completedMovement
+                    );
+                }
 
 
                 closeModal();
@@ -1398,6 +1604,7 @@ function initializeScheduledMovementModal() {
                     "Movimiento marcado como realizado."
                 );
 
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
 
                 await renderCalendar();
 
@@ -1719,6 +1926,12 @@ function initializeDayDetailModal() {
                         "credits"
                     );
 
+                const creditProjectionMovements =
+                    await getCreditProjectionMovements();
+
+                const displayMovements =
+                    movements.concat(creditProjectionMovements);
+
 
                 /*
                     Limpiar contenido anterior.
@@ -1896,22 +2109,24 @@ function initializeDayDetailModal() {
                                     closeModal();
 
 
-                                    window.dispatchEvent(
-                                        new CustomEvent(
-                                            "openScheduledMovement",
-                                            {
-                                                detail: {
-
-                                                    movementId:
-                                                        movement.id,
-
-                                                    occurrenceDate:
-                                                        date
-
+                                    if (typeof window.cauceOpenScheduledMovement === "function") {
+                                        window.cauceOpenScheduledMovement({
+                                            movementId: movement.id,
+                                            occurrenceDate: date
+                                        });
+                                    } else {
+                                        window.dispatchEvent(
+                                            new CustomEvent(
+                                                "openScheduledMovement",
+                                                {
+                                                    detail: {
+                                                        movementId: movement.id,
+                                                        occurrenceDate: date
+                                                    }
                                                 }
-                                            }
-                                        )
-                                    );
+                                            )
+                                        );
+                                    }
 
                                 }
                             );
@@ -1969,22 +2184,24 @@ function initializeDayDetailModal() {
                                     closeModal();
 
 
-                                    window.dispatchEvent(
-                                        new CustomEvent(
-                                            "openScheduledMovement",
-                                            {
-                                                detail: {
-
-                                                    movementId:
-                                                        movement.id,
-
-                                                    occurrenceDate:
-                                                        date
-
+                                    if (typeof window.cauceOpenScheduledMovement === "function") {
+                                        window.cauceOpenScheduledMovement({
+                                            movementId: movement.id,
+                                            occurrenceDate: date
+                                        });
+                                    } else {
+                                        window.dispatchEvent(
+                                            new CustomEvent(
+                                                "openScheduledMovement",
+                                                {
+                                                    detail: {
+                                                        movementId: movement.id,
+                                                        occurrenceDate: date
+                                                    }
                                                 }
-                                            }
-                                        )
-                                    );
+                                            )
+                                        );
+                                    }
 
                                 }
                             );
@@ -2008,64 +2225,62 @@ function initializeDayDetailModal() {
 
                 /*
                     =================================
-                    OBLIGACIONES DE CRÉDITO
+                    PAGOS / OBLIGACIONES DE CRÉDITO
                     =================================
                 */
 
-                const creditObligations =
-                    calculateCreditObligations(
-                        movements,
-                        credits
+                const dayCreditProjections =
+                    creditProjectionMovements.filter(
+                        projection => projection.scheduledDate === date && Number(projection.amount) > 0
                     );
 
+                if (dayCreditProjections.length > 0) {
+                    const creditSection = createSection("Pagos de crédito");
 
-                const dayCreditObligations =
-                    creditObligations.filter(
-                        obligation =>
-
-                            obligation.dueDate ===
-                                date
-
-                            &&
-
-                            obligation.pendingAmount >
-                                0
-                    );
-
-
-                if (
-                    dayCreditObligations.length > 0
-                ) {
-
-                    const creditSection =
-                        createSection(
-                            "Créditos por pagar"
+                    dayCreditProjections.forEach(projection => {
+                        const item = createItem(
+                            projection.description || "Pago de crédito",
+                            projection.amount
                         );
+                        item.classList.add("scheduled-movement-clickable");
+                        item.addEventListener("click", () => {
+                            closeModal();
+                            const payload = {
+                                creditId: projection.creditId,
+                                amount: Number(projection.amount) || 0,
+                                date: projection.scheduledDate || date,
+                                obligationId: projection.projectionSourceType === "obligation" ? projection.projectionSourceId : null,
+                                planId: projection.projectionSourceType === "plan" ? projection.projectionSourceId : null
+                            };
+                            if (typeof window.cauceOpenCreditPayment === "function") {
+                                window.cauceOpenCreditPayment(payload);
+                            } else {
+                                window.dispatchEvent(new CustomEvent("openCreditPaymentById", {
+                                    detail: payload
+                                }));
+                            }
+                        });
+                        creditSection.appendChild(item);
+                    });
 
+                    content.appendChild(creditSection);
+                }
 
-                    dayCreditObligations.forEach(
-                        obligation => {
+                const legacyCredits = credits.filter(credit =>
+                    !["credit_card", "loan", "other"].includes(credit.type)
+                );
+                const legacyCreditObligations =
+                    calculateCreditObligations(movements, legacyCredits);
+                const dayLegacyCreditObligations = legacyCreditObligations.filter(
+                    obligation => obligation.dueDate === date && obligation.pendingAmount > 0
+                );
 
-                            const item =
-                                createItem(
-                                    obligation.creditName,
-                                    obligation.pendingAmount
-                                );
-
-
-                            creditSection
-                                .appendChild(
-                                    item
-                                );
-
-                        }
-                    );
-
-
-                    content.appendChild(
-                        creditSection
-                    );
-
+                if (dayLegacyCreditObligations.length > 0) {
+                    const legacySection = createSection("Créditos por pagar");
+                    dayLegacyCreditObligations.forEach(obligation => {
+                        legacySection.appendChild(createItem(obligation.creditName, obligation.pendingAmount));
+                    });
+                    content.appendChild(legacySection);
                 }
 
 
@@ -2078,8 +2293,8 @@ function initializeDayDetailModal() {
                 const balance =
                     calculateCalendarBalance(
                         date,
-                        movements,
-                        credits
+                        displayMovements,
+                        legacyCredits
                     );
 
 
@@ -2241,7 +2456,9 @@ function initializeDayDetailModal() {
                     &&
                     scheduledMovements.length === 0
                     &&
-                    dayCreditObligations.length === 0
+                    dayCreditProjections.length === 0
+                    &&
+                    dayLegacyCreditObligations.length === 0
                 ) {
 
                     const emptyMessage =
@@ -2425,8 +2642,8 @@ function initializeEditMovementModal() {
         Movimiento que estamos editando.
     */
 
-    let selectedMovement =
-        null;
+    let selectedMovement = null;
+    let scheduledEditContext = null;
 
 
     function closeModal() {
@@ -2436,8 +2653,8 @@ function initializeEditMovementModal() {
         );
 
 
-        selectedMovement =
-            null;
+        selectedMovement = null;
+        scheduledEditContext = null;
 
     }
 
@@ -2493,10 +2710,14 @@ function initializeEditMovementModal() {
                 }
 
 
-                await deleteRecord(
-                    "movements",
-                    selectedMovement.id
-                );
+                if (selectedMovement.creditOperationId) {
+                    await deleteCreditLinkedMovement(selectedMovement.id);
+                } else {
+                    await deleteRecord(
+                        "movements",
+                        selectedMovement.id
+                    );
+                }
 
 
                 closeModal();
@@ -2506,6 +2727,8 @@ function initializeEditMovementModal() {
                     "Movimiento eliminado correctamente."
                 );
 
+                window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                window.dispatchEvent(new CustomEvent("cauceDataChanged"));
 
                 await renderCalendar();
 
@@ -2791,7 +3014,8 @@ function initializeEditMovementModal() {
 
     async function openMovementForEdit(
         movementId,
-        expectedStatus
+        expectedStatus,
+        editContext = null
     ) {
 
         selectedMovement =
@@ -2824,6 +3048,9 @@ function initializeEditMovementModal() {
         }
 
 
+        scheduledEditContext = expectedStatus === "scheduled" ? editContext : null;
+
+
         await loadCreditOptions();
 
 
@@ -2851,7 +3078,7 @@ function initializeEditMovementModal() {
 
         dateInput.value =
             expectedStatus === "scheduled"
-                ? selectedMovement.scheduledDate
+                ? (editContext?.occurrenceDate || selectedMovement.scheduledDate)
                 : selectedMovement.completedDate;
 
 
@@ -2958,7 +3185,11 @@ function initializeEditMovementModal() {
 
                 await openMovementForEdit(
                     event.detail.movementId,
-                    "scheduled"
+                    "scheduled",
+                    {
+                        occurrenceDate: event.detail.occurrenceDate || null,
+                        scope: event.detail.scope || "series"
+                    }
                 );
 
             } catch (error) {
@@ -3207,10 +3438,74 @@ function initializeEditMovementModal() {
                 };
 
 
-                await saveRecord(
-                    "movements",
-                    updatedMovement
-                );
+                if (
+                    selectedMovement.status === "scheduled" &&
+                    selectedMovement.recurrence &&
+                    scheduledEditContext?.scope === "single" &&
+                    scheduledEditContext.occurrenceDate
+                ) {
+                    await createOccurrenceCancellation(
+                        selectedMovement,
+                        scheduledEditContext.occurrenceDate
+                    );
+
+                    await saveRecord("movements", {
+                        ...updatedMovement,
+                        id: makeOccurrenceRecordId("mov-override"),
+                        status: "scheduled",
+                        recurrence: null,
+                        scheduledDate: movementDateValue,
+                        sourceOverrideMovementId: selectedMovement.id,
+                        sourceOverrideDate: scheduledEditContext.occurrenceDate,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+                } else if (
+                    selectedMovement.status === "scheduled" &&
+                    selectedMovement.recurrence &&
+                    scheduledEditContext?.scope === "future" &&
+                    scheduledEditContext.occurrenceDate
+                ) {
+                    const occurrenceDate = scheduledEditContext.occurrenceDate;
+                    const nominalDate = occurrenceDate;
+
+                    if (occurrenceDate <= selectedMovement.scheduledDate) {
+                        await saveRecord("movements", {
+                            ...updatedMovement,
+                            scheduledDate: movementDateValue,
+                            recurrence: { ...selectedMovement.recurrence },
+                            updatedAt: new Date().toISOString()
+                        });
+                    } else {
+                        await endRecurringRuleBefore(selectedMovement, occurrenceDate);
+
+                        let newStartDate = movementDateValue;
+                        if (selectedMovement.recurrence?.dateAdjustment && movementDateValue === occurrenceDate) {
+                            newStartDate = nominalDate;
+                        }
+
+                        await saveRecord("movements", {
+                            ...updatedMovement,
+                            id: makeOccurrenceRecordId(selectedMovement.kind === "payroll" ? "payroll" : "series"),
+                            status: "scheduled",
+                            scheduledDate: newStartDate,
+                            completedDate: null,
+                            recurrence: {
+                                ...selectedMovement.recurrence,
+                                endDate: null
+                            },
+                            sourceSeriesMovementId: selectedMovement.id,
+                            sourceSeriesDate: occurrenceDate,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString()
+                        });
+                    }
+                } else {
+                    await saveRecord(
+                        "movements",
+                        updatedMovement
+                    );
+                }
 
 
                 closeModal();
@@ -5072,6 +5367,21 @@ document.addEventListener(
                 2. Buscar configuración existente
             */
 
+            const todayForCreditPeriods = (() => {
+                const now = new Date();
+                return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+            })();
+
+            try {
+                await ensureAllCreditPeriodsUpToDate(todayForCreditPeriods);
+            } catch (creditPeriodError) {
+                // El motor de créditos nunca debe impedir que la app arranque.
+                console.warn(
+                    "No se pudieron actualizar los periodos de crédito al iniciar:",
+                    creditPeriodError
+                );
+            }
+
             const settings =
                 await getRecord(
                     "settings",
@@ -5120,6 +5430,17 @@ document.addEventListener(
 
             initializeMonthlyMovementsModal();
 
+            initializePendingUI({
+                refreshApp: async () => {
+                    await renderCalendar();
+                    await updateCurrentBalance();
+                    window.dispatchEvent(new CustomEvent("creditDataChanged"));
+                    window.dispatchEvent(new CustomEvent("cauceDataChanged"));
+                }
+            });
+
+            initializeFeedbackUI();
+
 
             /*
                 5. Inicializar calendario
@@ -5149,6 +5470,19 @@ document.addEventListener(
                 "No se pudo iniciar la aplicación:",
                 error
             );
+
+            // Diagnóstico visible: si algo vuelve a fallar durante el arranque,
+            // no dejamos una pantalla muda sin explicar qué ocurrió.
+            const banner = document.createElement("div");
+            banner.setAttribute("role", "alert");
+            banner.style.cssText =
+                "position:fixed;left:12px;right:12px;top:12px;z-index:99999;" +
+                "padding:12px 14px;border-radius:10px;background:#7f1d1d;color:#fff;" +
+                "font:14px/1.4 system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.25)";
+            banner.textContent =
+                "Cauce no pudo iniciar correctamente. Error: " +
+                (error?.message || String(error));
+            document.body.appendChild(banner);
 
         }
 

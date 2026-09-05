@@ -1,5 +1,5 @@
-const DATABASE_NAME = "ControlGastosDB";
-const DATABASE_VERSION = 3;
+const DATABASE_NAME = "CauceDB_V3";
+const DATABASE_VERSION = 1;
 
 let database = null;
 
@@ -280,272 +280,190 @@ export function initializeDatabase() {
                 event.target.result;
 
 
-            /*
-                CONFIGURACIÓN
-            */
+            const createStore = (
+                name,
+                indexes = []
+            ) => {
 
-            if (!database.objectStoreNames.contains("settings")) {
+                if (
+                    database.objectStoreNames.contains(
+                        name
+                    )
+                ) {
 
-                database.createObjectStore(
-                    "settings",
-                    {
-                        keyPath: "id"
-                    }
-                );
+                    return null;
 
-            }
+                }
 
 
-            /*
-                MOVIMIENTOS
-            */
-
-            if (!database.objectStoreNames.contains("movements")) {
-
-                const movementsStore =
+                const store =
                     database.createObjectStore(
-                        "movements",
-                        {
-                            keyPath: "id",
-                            autoIncrement: false
-                        }
-                    );
-
-
-                movementsStore.createIndex(
-                    "date",
-                    "date",
-                    {
-                        unique: false
-                    }
-                );
-
-
-                movementsStore.createIndex(
-                    "type",
-                    "type",
-                    {
-                        unique: false
-                    }
-                );
-
-
-                movementsStore.createIndex(
-                    "paymentMethod",
-                    "paymentMethod",
-                    {
-                        unique: false
-                    }
-                );
-
-
-                movementsStore.createIndex(
-                    "creditId",
-                    "creditId",
-                    {
-                        unique: false
-                    }
-                );
-
-            }
-
-
-            /*
-                Crear almacén de créditos
-                si todavía no existe.
-            */
-
-            if (
-                !database.objectStoreNames.contains(
-                    "credits"
-                )
-            ) {
-
-                database.createObjectStore(
-                    "credits",
-                    {
-                        keyPath: "id"
-                    }
-                );
-
-            }
-
-
-            /*
-                REGLAS RECURRENTES
-            */
-
-            if (!database.objectStoreNames.contains("recurringRules")) {
-
-                const recurringStore =
-                    database.createObjectStore(
-                        "recurringRules",
+                        name,
                         {
                             keyPath: "id"
                         }
                     );
 
 
-                recurringStore.createIndex(
-                    "startDate",
-                    "startDate",
-                    {
-                        unique: false
-                    }
+                indexes.forEach(
+                    index =>
+                        store.createIndex(
+                            index.name,
+                            index.keyPath,
+                            {
+                                unique:
+                                    Boolean(
+                                        index.unique
+                                    )
+                            }
+                        )
                 );
 
 
-                recurringStore.createIndex(
-                    "active",
-                    "active",
-                    {
-                        unique: false
-                    }
-                );
+                return store;
 
-            }
+            };
 
 
             /*
-                CRÉDITOS
+                =================================
+                NÚCLEO LOCAL
+                =================================
+
+                V3 parte de una base limpia.
+                Conservamos temporalmente algunos
+                almacenes V2 mientras sus pantallas
+                son sustituidas por la nueva lógica.
             */
 
-            if (!database.objectStoreNames.contains("credits")) {
-
-                const creditsStore =
-                    database.createObjectStore(
-                        "credits",
-                        {
-                            keyPath: "id"
-                        }
-                    );
+            createStore(
+                "settings"
+            );
 
 
-                creditsStore.createIndex(
-                    "name",
-                    "name",
-                    {
-                        unique: false
-                    }
-                );
+            createStore(
+                "movements",
+                [
+                    { name: "date", keyPath: "date" },
+                    { name: "type", keyPath: "type" },
+                    { name: "paymentMethod", keyPath: "paymentMethod" },
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "status", keyPath: "status" }
+                ]
+            );
 
 
-                creditsStore.createIndex(
-                    "active",
-                    "active",
-                    {
-                        unique: false
-                    }
-                );
-
-            }
+            createStore(
+                "recurringRules",
+                [
+                    { name: "startDate", keyPath: "startDate" },
+                    { name: "active", keyPath: "active" }
+                ]
+            );
 
 
             /*
-                AJUSTES DE CRÉDITO
-
-                Aquí almacenaremos:
-
-                - abonos
-                - devoluciones
-                - otros ajustes
+                =================================
+                MODELO DE CRÉDITOS V3
+                =================================
             */
 
-            if (!database.objectStoreNames.contains("creditAdjustments")) {
-
-                const adjustmentsStore =
-                    database.createObjectStore(
-                        "creditAdjustments",
-                        {
-                            keyPath: "id"
-                        }
-                    );
-
-
-                adjustmentsStore.createIndex(
-                    "creditId",
-                    "creditId",
-                    {
-                        unique: false
-                    }
-                );
+            createStore(
+                "credits",
+                [
+                    { name: "name", keyPath: "name" },
+                    { name: "type", keyPath: "type" },
+                    { name: "active", keyPath: "active" }
+                ]
+            );
 
 
-                adjustmentsStore.createIndex(
-                    "date",
-                    "date",
-                    {
-                        unique: false
-                    }
-                );
+            createStore(
+                "creditOperations",
+                [
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "date", keyPath: "date" },
+                    { name: "type", keyPath: "type" },
+                    { name: "periodId", keyPath: "periodId" },
+                    { name: "planId", keyPath: "planId" },
+                    { name: "obligationId", keyPath: "obligationId" },
+                    { name: "movementId", keyPath: "movementId" }
+                ]
+            );
 
 
-                adjustmentsStore.createIndex(
-                    "type",
-                    "type",
-                    {
-                        unique: false
-                    }
-                );
+            createStore(
+                "creditPeriods",
+                [
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "startDate", keyPath: "startDate" },
+                    { name: "endDate", keyPath: "endDate" },
+                    { name: "dueDate", keyPath: "dueDate" },
+                    { name: "status", keyPath: "status" }
+                ]
+            );
 
-            }
+
+            createStore(
+                "creditObligations",
+                [
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "periodId", keyPath: "periodId" },
+                    { name: "scheduledPeriodId", keyPath: "scheduledPeriodId" },
+                    { name: "dueDate", keyPath: "dueDate" },
+                    { name: "status", keyPath: "status" }
+                ]
+            );
+
+
+            createStore(
+                "creditPlans",
+                [
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "sourceType", keyPath: "sourceType" },
+                    { name: "sourceOperationId", keyPath: "sourceOperationId" },
+                    { name: "status", keyPath: "status" }
+                ]
+            );
 
 
             /*
+                Compatibilidad temporal con V2.
+                Se retirará cuando el flujo de créditos
+                antiguo deje de utilizarlo.
+            */
+
+            createStore(
+                "creditAdjustments",
+                [
+                    { name: "creditId", keyPath: "creditId" },
+                    { name: "date", keyPath: "date" },
+                    { name: "type", keyPath: "type" }
+                ]
+            );
+
+
+            /*
+                =================================
                 BASE DE SINCRONIZACIÓN
-
-                Estos almacenes todavía no envían
-                información a ningún servidor.
-                Sirven para registrar la identidad
-                local del dispositivo y una cola de
-                cambios preparada para una futura
-                sincronización entre dispositivos.
+                =================================
             */
 
-            if (!database.objectStoreNames.contains("syncMeta")) {
-
-                database.createObjectStore(
-                    "syncMeta",
-                    {
-                        keyPath: "id"
-                    }
-                );
-
-            }
+            createStore(
+                "syncMeta"
+            );
 
 
-            if (!database.objectStoreNames.contains("syncQueue")) {
-
-                const syncQueueStore =
-                    database.createObjectStore(
-                        "syncQueue",
-                        {
-                            keyPath: "id"
-                        }
-                    );
-
-
-                syncQueueStore.createIndex(
-                    "changedAt",
-                    "changedAt",
-                    {
-                        unique: false
-                    }
-                );
-
-
-                syncQueueStore.createIndex(
-                    "storeName",
-                    "storeName",
-                    {
-                        unique: false
-                    }
-                );
-
-            }
+            createStore(
+                "syncQueue",
+                [
+                    { name: "changedAt", keyPath: "changedAt" },
+                    { name: "storeName", keyPath: "storeName" },
+                    { name: "status", keyPath: "status" }
+                ]
+            );
 
         };
-
 
         /*
             Base de datos abierta correctamente.
@@ -1168,5 +1086,169 @@ export async function clearSyncSystemData() {
             "syncMeta"
         )
     ]);
+
+}
+
+/*
+    Ejecuta varias escrituras como una sola transacción.
+
+    Es la base para operaciones V3 que deben permanecer
+    consistentes entre varios almacenes, por ejemplo:
+
+    - movimiento de salida
+    - operación de crédito
+    - actualización de obligación
+
+    Si una escritura falla, IndexedDB aborta toda la
+    transacción y no queda un estado financiero a medias.
+*/
+export function writeRecordsAtomically(
+    operations
+) {
+
+    return new Promise((resolve, reject) => {
+
+        if (!database) {
+            reject(
+                new Error(
+                    "La base de datos no está inicializada."
+                )
+            );
+            return;
+        }
+
+        if (
+            !Array.isArray(operations) ||
+            operations.length === 0
+        ) {
+            resolve([]);
+            return;
+        }
+
+        const storeNames = [
+            ...new Set(
+                operations.map(
+                    operation =>
+                        operation.storeName
+                )
+            )
+        ];
+
+        const transaction =
+            database.transaction(
+                storeNames,
+                "readwrite"
+            );
+
+        const syncMutations = [];
+
+        try {
+
+            operations.forEach(
+                operation => {
+
+                    const store =
+                        transaction.objectStore(
+                            operation.storeName
+                        );
+
+                    switch (operation.type) {
+
+                        case "add":
+                            store.add(
+                                operation.record
+                            );
+                            syncMutations.push({
+                                operation: "add",
+                                storeName: operation.storeName,
+                                recordId:
+                                    operation.record?.id ?? null,
+                                payload:
+                                    operation.record ?? null
+                            });
+                            break;
+
+                        case "put":
+                            store.put(
+                                operation.record
+                            );
+                            syncMutations.push({
+                                operation: "put",
+                                storeName: operation.storeName,
+                                recordId:
+                                    operation.record?.id ?? null,
+                                payload:
+                                    operation.record ?? null
+                            });
+                            break;
+
+                        case "delete":
+                            store.delete(
+                                operation.id
+                            );
+                            syncMutations.push({
+                                operation: "delete",
+                                storeName: operation.storeName,
+                                recordId:
+                                    operation.id ?? null,
+                                payload: null
+                            });
+                            break;
+
+                        default:
+                            throw new Error(
+                                `Operación atómica no soportada: ${operation.type}`
+                            );
+
+                    }
+
+                }
+            );
+
+        } catch (error) {
+
+            transaction.abort();
+            reject(error);
+            return;
+
+        }
+
+        transaction.oncomplete = () => {
+
+            syncMutations.forEach(
+                mutation =>
+                    queueSyncMutation(
+                        mutation.operation,
+                        mutation.storeName,
+                        mutation.recordId,
+                        mutation.payload
+                    )
+            );
+
+            resolve(
+                operations.map(
+                    operation =>
+                        operation.record ?? null
+                )
+            );
+
+        };
+
+        transaction.onerror = () => {
+            reject(
+                transaction.error
+            );
+        };
+
+        transaction.onabort = () => {
+            reject(
+                transaction.error ||
+                new Error(
+                    "La transacción fue cancelada."
+                )
+            );
+        };
+
+    });
 
 }

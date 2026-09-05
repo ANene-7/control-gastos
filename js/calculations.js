@@ -315,6 +315,29 @@ export function calculateDailyBalance(
         y obligaciones pendientes de crédito.
 */
 
+function getCompletedMovementsForFutureDate(date, movements = []) {
+    return movements.filter(movement =>
+        movement.status === "completed" &&
+        movement.completedDate === date
+    );
+}
+
+function applyCashMovementImpact(balance, movement) {
+    if (movement.paymentMethod === "credit" && movement.type === "expense") {
+        return balance;
+    }
+
+    if (movement.type === "income") {
+        return balance + Number(movement.amount || 0);
+    }
+
+    if (movement.type === "expense") {
+        return balance - Number(movement.amount || 0);
+    }
+
+    return balance;
+}
+
 export function calculateCalendarBalance(
     date,
     movements = [],
@@ -402,47 +425,18 @@ export function calculateCalendarBalance(
 
     scheduledMovements.forEach(
         movement => {
+            dailyBalance = applyCashMovementImpact(dailyBalance, movement);
+        }
+    );
 
-            /*
-                Una compra programada mediante
-                TDC no reduce el dinero disponible
-                el día de la compra.
-            */
-
-            if (
-                movement.paymentMethod ===
-                    "credit"
-                &&
-                movement.type ===
-                    "expense"
-            ) {
-
-                return;
-
-            }
-
-
-            if (
-                movement.type ===
-                    "income"
-            ) {
-
-                dailyBalance +=
-                    movement.amount;
-
-            }
-
-
-            if (
-                movement.type ===
-                    "expense"
-            ) {
-
-                dailyBalance -=
-                    movement.amount;
-
-            }
-
+    /*
+        Si una ocurrencia futura ya fue marcada como realizada, deja de
+        aparecer como programada, pero su fecha efectiva sigue siendo futura.
+        Debe afectar la proyección desde esa fecha, no el saldo actual.
+    */
+    getCompletedMovementsForFutureDate(date, movements).forEach(
+        movement => {
+            dailyBalance = applyCashMovementImpact(dailyBalance, movement);
         }
     );
 
@@ -1065,48 +1059,17 @@ export function calculateProjectedBalance(
 
         scheduledMovements.forEach(
             movement => {
+                projectedBalance = applyCashMovementImpact(projectedBalance, movement);
+            }
+        );
 
-                /*
-                    Por ahora una compra
-                    programada mediante TDC
-                    tampoco reduce efectivo
-                    inmediatamente.
-                */
-
-                if (
-                    movement.paymentMethod ===
-                        "credit"
-                    &&
-                    movement.type ===
-                        "expense"
-                ) {
-
-                    return;
-
-                }
-
-
-                if (
-                    movement.type ===
-                    "income"
-                ) {
-
-                    projectedBalance +=
-                        movement.amount;
-
-                }
-
-
-                if (
-                    movement.type ===
-                    "expense"
-                ) {
-
-                    projectedBalance -=
-                        movement.amount;
-
-                }
-
+        /*
+            Una ocurrencia confirmada por adelantado ya resolvió su
+            programación, así que la sumamos explícitamente en completedDate.
+        */
+        getCompletedMovementsForFutureDate(cursorDate, movements).forEach(
+            movement => {
+                projectedBalance = applyCashMovementImpact(projectedBalance, movement);
             }
         );
 

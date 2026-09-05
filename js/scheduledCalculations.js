@@ -447,6 +447,17 @@ export function occursOnDate(
         return movement.scheduledDate === date;
     }
 
+    /*
+        Una recurrencia puede cerrarse sin borrar su regla histórica.
+        endDate representa la última fecha efectiva permitida.
+    */
+    if (
+        movement.recurrence.endDate &&
+        date > movement.recurrence.endDate
+    ) {
+        return false;
+    }
+
     const adjustment =
         movement.recurrence.dateAdjustment;
 
@@ -535,7 +546,7 @@ export function getScheduledMovementsForDate(
             */
 
             if (
-                isOccurrenceCompleted(
+                isOccurrenceResolved(
                     movement,
                     date,
                     movements
@@ -560,7 +571,7 @@ export function getScheduledMovementsForDate(
     registrada como realizada.
 */
 
-function isOccurrenceCompleted(
+function isOccurrenceResolved(
     scheduledMovement,
     occurrenceDate,
     movements
@@ -569,8 +580,9 @@ function isOccurrenceCompleted(
     return movements.some(
         movement =>
 
-            movement.status ===
-                "completed"
+            ["completed", "skipped", "cancelled"].includes(
+                movement.status
+            )
 
             &&
 

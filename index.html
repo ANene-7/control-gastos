@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <!-- Cauce V2.0.9d -->
+    <!-- Cauce V3.0.0w -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#ffffff" id="themeColorMeta">
@@ -115,6 +115,38 @@
 
                         <span>
                             Créditos
+                        </span>
+
+                    </button>
+
+
+                    <button
+                        id="pendingItemsButton"
+                        class="secondary-button header-button pending-items-button">
+
+                        <span class="header-button-icon">
+                            !
+                        </span>
+
+                        <span>
+                            Pendientes
+                        </span>
+
+                        <span id="pendingItemsBadge" class="pending-items-badge hidden">0</span>
+
+                    </button>
+
+
+                    <button
+                        id="feedbackButton"
+                        class="secondary-button header-button">
+
+                        <span class="header-button-icon">
+                            ✎
+                        </span>
+
+                        <span>
+                            Feedback
                         </span>
 
                     </button>
@@ -1246,182 +1278,181 @@
     id="creditsModal"
     class="modal hidden">
 
-    <div class="modal-content">
+    <div class="modal-content credits-management-modal-content">
 
         <div class="modal-header">
-
             <h2>Gestión de créditos</h2>
-
             <button
                 id="closeCreditsModalButton"
                 class="close-button"
                 aria-label="Cerrar">
                 ×
             </button>
-
         </div>
 
-
-        <p class="credits-modal-intro">
-            Administra tus créditos activos, sus límites y sus fechas clave.
-            En esta primera etapa mantenemos intacta la lógica financiera existente
-            y mejoramos la organización de la información.
-        </p>
-
-
-        <form id="creditForm">
-
-            <div class="form-group">
-
-                <label for="creditName">
-                    Nombre
-                </label>
-
-                <input
-                    type="text"
-                    id="creditName"
-                    placeholder="Ej. BBVA Azul"
-                    required>
-
-            </div>
-
-
-            <div class="form-group">
-
-                <label for="creditType">
-                    Tipo
-                </label>
-
-                <select
-                    id="creditType"
-                    required>
-
-                    <option value="creditCard">
-                        Tarjeta de crédito
-                    </option>
-
-                    <option value="storeCredit">
-                        Crédito de tienda
-                    </option>
-
-                    <option value="other">
-                        Otro crédito
-                    </option>
-
-                </select>
-
-            </div>
-
-
-            <div class="form-group">
-
-                <label for="creditLimit">
-                    Límite de crédito
-                </label>
-
-                <input
-                    type="number"
-                    id="creditLimit"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    required>
-
-            </div>
-
-
-            <div class="form-group">
-
-                <label for="creditClosingDay">
-                    Día de corte
-                </label>
-
-                <input
-                    type="number"
-                    id="creditClosingDay"
-                    min="1"
-                    max="31"
-                    required>
-
-            </div>
-
-
-            <div class="form-group">
-
-                <label for="creditPaymentDueDay">
-                    Día límite de pago
-                </label>
-
-                <input
-                    type="number"
-                    id="creditPaymentDueDay"
-                    min="1"
-                    max="31"
-                    required>
-
-            </div>
-
-
-            <div class="form-actions">
-
-                <button
-                    type="button"
-                    id="cancelCreditButton"
-                    class="secondary-button">
-                    Cancelar
-                </button>
-
-                <button
-                    type="submit"
-                    class="primary-button">
-                    Guardar crédito
-                </button>
-
-            </div>
-
-        </form>
-
-
-        <div
-            id="creditsList"
-            class="credits-list">
+        <div class="credits-management-toolbar">
+            <p class="credits-modal-intro">
+                Consulta tus créditos y entra al detalle para revisar deuda, próximos pagos y operaciones.
+            </p>
+            <button type="button" id="openCreditFormModalButton" class="primary-button">
+                + Agregar crédito
+            </button>
         </div>
 
+        <div id="creditsList" class="credits-list"></div>
 
         <div class="inactive-credits-section">
-
             <button
                 type="button"
                 id="inactiveCreditsMenuButton"
                 class="secondary-button inactive-credits-menu-button"
                 aria-expanded="false">
-
-                <span>
-                    ☰
-                </span>
-
-                <span>
-                    Créditos inactivos
-                </span>
-
+                <span>☰</span>
+                <span>Créditos inactivos</span>
             </button>
 
-
-            <div
-                id="inactiveCreditsPanel"
-                class="inactive-credits-panel hidden">
-
-                <div
-                    id="inactiveCreditsList"
-                    class="credits-list">
-                </div>
-
+            <div id="inactiveCreditsPanel" class="inactive-credits-panel hidden">
+                <div id="inactiveCreditsList" class="credits-list"></div>
             </div>
-
         </div>
 
     </div>
+</div>
 
+<!-- Modal independiente para agregar / editar crédito -->
+<div
+    id="creditFormModal"
+    class="modal hidden">
+
+    <div class="modal-content credit-form-modal-content">
+
+        <div class="modal-header">
+            <h2 id="creditFormModalTitle">Agregar crédito</h2>
+            <button
+                id="closeCreditFormModalButton"
+                class="close-button"
+                aria-label="Cerrar">
+                ×
+            </button>
+        </div>
+
+        <form id="creditForm" class="credit-v3-form">
+
+            <div class="credit-v3-section">
+                <h3>1. Datos básicos</h3>
+
+                <div class="form-group">
+                    <label for="creditName">Nombre</label>
+                    <input type="text" id="creditName" placeholder="Ej. BBVA Azul" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="creditType">Tipo</label>
+                    <select id="creditType" required>
+                        <option value="credit_card">Tarjeta de crédito</option>
+                        <option value="loan">Préstamo / crédito con saldo</option>
+                        <option value="other">Otro crédito</option>
+                    </select>
+                </div>
+
+                <div id="creditCardFields">
+                    <div class="form-group">
+                        <label for="creditLimit">Límite de crédito</label>
+                        <input type="number" id="creditLimit" min="0" step="0.01" placeholder="0.00">
+                    </div>
+
+                    <div class="form-row credit-v3-two-columns">
+                        <div class="form-group">
+                            <label for="creditClosingDay">Día de corte</label>
+                            <input type="number" id="creditClosingDay" min="1" max="31">
+                        </div>
+                        <div class="form-group">
+                            <label for="creditPaymentDueDay">Día límite de pago</label>
+                            <input type="number" id="creditPaymentDueDay" min="1" max="31">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="credit-v3-section">
+                <h3>2. Situación actual</h3>
+                <div class="form-group">
+                    <label for="creditInitialDebt">Deuda actual</label>
+                    <input type="number" id="creditInitialDebt" min="0" step="0.01" value="0">
+                    <small>Es el saldo que ya debes al comenzar a usar Cauce. No se registrará como una compra.</small>
+                </div>
+
+                <div class="form-group hidden" id="creditInitialDebtDateGroup">
+                    <label for="creditInitialDebtDate">Saldo al</label>
+                    <input type="date" id="creditInitialDebtDate">
+                </div>
+            </div>
+
+            <div class="credit-v3-section hidden" id="creditNextPaymentSection">
+                <h3>3. Próximo pago</h3>
+                <div class="form-group">
+                    <label for="creditNextPaymentAmount">¿Cuánto planeas pagar próximamente?</label>
+                    <input type="number" id="creditNextPaymentAmount" min="0" step="0.01" value="0">
+                </div>
+                <div class="form-group hidden" id="creditNextPaymentDateGroup">
+                    <label for="creditNextPaymentDate">Fecha del próximo pago</label>
+                    <input type="date" id="creditNextPaymentDate">
+                </div>
+                <div class="credit-v3-live-summary" id="creditDebtSplitSummary"></div>
+            </div>
+
+            <div class="credit-v3-section hidden" id="creditRemainingSection">
+                <h3>4. Saldo restante</h3>
+                <p id="creditRemainingLabel"></p>
+                <div class="form-group">
+                    <label for="creditRemainingMode">¿Cómo quieres gestionarlo?</label>
+                    <select id="creditRemainingMode">
+                        <option value="manual">Gestionarlo manualmente</option>
+                        <option value="installments">Dividirlo en X pagos</option>
+                        <option value="fixed_amount">Pagar una cantidad fija</option>
+                    </select>
+                </div>
+
+                <div id="creditPlanFields" class="hidden">
+                    <div class="form-group hidden" id="creditInstallmentCountGroup">
+                        <label for="creditInstallmentCount">Número de pagos</label>
+                        <input type="number" id="creditInstallmentCount" min="1" step="1">
+                    </div>
+                    <div class="form-group hidden" id="creditInstallmentAmountGroup">
+                        <label for="creditInstallmentAmount">Importe de cada pago</label>
+                        <input type="number" id="creditInstallmentAmount" min="0.01" step="0.01">
+                    </div>
+                    <div class="form-row credit-v3-two-columns">
+                        <div class="form-group">
+                            <label for="creditPlanFrequency">Frecuencia</label>
+                            <select id="creditPlanFrequency">
+                                <option value="monthly">Mensual</option>
+                                <option value="biweekly">Quincenal</option>
+                                <option value="weekly">Semanal</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="creditPlanFirstDueDate">Primer pago</label>
+                            <input type="date" id="creditPlanFirstDueDate">
+                        </div>
+                    </div>
+                    <div class="credit-v3-live-summary" id="creditPlanSummary"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="creditNotes">Notas</label>
+                <textarea id="creditNotes" rows="2" placeholder="Opcional"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="button" id="cancelCreditButton" class="secondary-button">Cancelar</button>
+                <button type="submit" class="primary-button">Guardar crédito</button>
+            </div>
+
+        </form>
+
+    </div>
 </div>
 
 <!-- Modal de detalle de crédito -->
@@ -1432,7 +1463,6 @@
     <div class="modal-content credit-detail-modal-content">
 
         <div class="modal-header">
-
             <div>
                 <h2 id="creditDetailTitle">Detalle de crédito</h2>
                 <p id="creditDetailSubtitle" class="credit-detail-header-subtitle"></p>
@@ -1444,13 +1474,111 @@
                 aria-label="Cerrar">
                 ×
             </button>
-
         </div>
 
         <div id="creditDetailContent"></div>
 
     </div>
+</div>
 
+<!-- Resolución de pago parcial de crédito -->
+<div id="creditPaymentResolutionModal" class="modal hidden">
+    <div class="modal-content credit-payment-resolution-modal-content">
+        <div class="modal-header">
+            <h2 id="creditPaymentResolutionTitle">Pago parcial</h2>
+            <button id="closeCreditPaymentResolutionModalButton" class="close-button" aria-label="Cerrar">×</button>
+        </div>
+        <p id="creditPaymentResolutionMessage" class="credit-payment-resolution-message"></p>
+        <div id="creditPaymentResolutionOptions" class="credit-payment-resolution-options"></div>
+        <div id="creditPaymentResolutionDateRow" class="form-group hidden">
+            <label for="creditPaymentResolutionDate">Nueva fecha del restante</label>
+            <input id="creditPaymentResolutionDate" type="date">
+        </div>
+        <div class="form-actions">
+            <button type="button" id="creditPaymentResolutionCancel" class="secondary-button">Cancelar</button>
+            <button type="button" id="creditPaymentResolutionConfirm" class="primary-button">Continuar</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Feedback de uso real -->
+<div id="feedbackModal" class="modal hidden">
+    <div class="modal-content feedback-modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>Enviar feedback</h2>
+                <p class="feedback-intro">Reporta una falla o comparte una sugerencia sin incluir tus movimientos financieros.</p>
+            </div>
+            <button id="closeFeedbackModalButton" class="close-button" aria-label="Cerrar">×</button>
+        </div>
+
+        <form id="feedbackForm">
+            <div class="form-grid">
+                <label>
+                    Tipo
+                    <select id="feedbackType">
+                        <option value="Falla">Falla</option>
+                        <option value="Sugerencia">Sugerencia</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </label>
+
+                <label>
+                    Contacto (opcional)
+                    <input id="feedbackContact" type="text" autocomplete="email" placeholder="Correo u otro medio">
+                </label>
+
+                <label class="full-width">
+                    Mensaje
+                    <textarea id="feedbackMessage" rows="7" required placeholder="Describe qué ocurrió, qué esperabas que ocurriera o qué te gustaría mejorar."></textarea>
+                </label>
+            </div>
+
+            <label class="feedback-diagnostics-option">
+                <input id="feedbackIncludeDiagnostics" type="checkbox" checked>
+                <span>Incluir datos técnicos básicos (versión, navegador, tamaño de pantalla y URL). No se incluyen saldos ni movimientos.</span>
+            </label>
+
+            <div id="feedbackStatus" class="feedback-status" role="status" aria-live="polite"></div>
+
+            <div class="form-actions feedback-actions">
+                <button type="button" id="copyFeedbackButton" class="secondary-button">Copiar reporte</button>
+                <button type="submit" class="primary-button">Preparar correo</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Bandeja de movimientos pendientes -->
+<div id="pendingItemsModal" class="modal hidden">
+    <div class="modal-content pending-items-modal-content">
+        <div class="modal-header">
+            <div>
+                <h2>Movimientos pendientes</h2>
+                <p id="pendingItemsSummary" class="pending-items-summary"></p>
+            </div>
+            <button id="closePendingItemsModalButton" class="close-button" aria-label="Cerrar">×</button>
+        </div>
+        <div id="pendingItemsList" class="pending-items-list"></div>
+    </div>
+</div>
+
+
+<!-- Modal para elegir alcance de una recurrencia -->
+<div id="recurrenceScopeModal" class="modal hidden">
+  <div class="modal-content compact-modal-content">
+    <div class="modal-header">
+      <h2 id="recurrenceScopeTitle">Modificar recurrencia</h2>
+      <button id="closeRecurrenceScopeModalButton" class="close-button" aria-label="Cerrar">×</button>
+    </div>
+    <p id="recurrenceScopeMessage">Elige qué ocurrencias quieres modificar.</p>
+    <div class="form-actions">
+      <button type="button" id="recurrenceScopeSingleButton" class="secondary-button">Sólo esta ocurrencia</button>
+      <button type="button" id="recurrenceScopeFutureButton" class="primary-button">Esta y futuras</button>
+      <button type="button" id="recurrenceScopeCancelButton" class="secondary-button">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal de movimiento programado -->
@@ -2058,6 +2186,24 @@
 
     </div>
 
+</div>
+
+
+<!-- Modal para seleccionar una nueva fecha -->
+<div id="datePromptModal" class="modal hidden">
+    <div class="modal-content compact-modal-content">
+        <div class="modal-header">
+            <h2 id="datePromptModalTitle">Seleccionar fecha</h2>
+            <button id="closeDatePromptModalButton" class="close-button" aria-label="Cerrar">×</button>
+        </div>
+        <p id="datePromptModalMessage"></p>
+        <label for="datePromptModalInput">Nueva fecha</label>
+        <input type="date" id="datePromptModalInput">
+        <div class="form-actions">
+            <button type="button" id="cancelDatePromptButton" class="secondary-button">Cancelar</button>
+            <button type="button" id="acceptDatePromptButton" class="primary-button">Aceptar</button>
+        </div>
+    </div>
 </div>
 
 <!-- Modal de confirmación -->

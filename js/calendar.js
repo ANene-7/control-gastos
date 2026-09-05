@@ -14,6 +14,10 @@ import {
     getScheduledMovementsForDate
 } from "./scheduledCalculations.js";
 
+import {
+    getCreditProjectionMovements
+} from "./creditProjection.js";
+
 
 /*
     Estado actual del calendario.
@@ -252,11 +256,19 @@ const credits =
         "credits"
     );
 
+const creditProjectionMovements =
+    await getCreditProjectionMovements();
+
+const displayMovements =
+    movements.concat(creditProjectionMovements);
+
+const legacyCredits =
+    credits.filter(credit => !["credit_card", "loan", "other"].includes(credit.type));
 
 const creditObligations =
     calculateCreditObligations(
         movements,
-        credits
+        legacyCredits
     );
 
 
@@ -295,8 +307,8 @@ const creditObligations =
     if (showingTable) {
 
         await renderMonthlyTable(
-            movements,
-            credits,
+            displayMovements,
+            legacyCredits,
             creditObligations
         );
 
@@ -466,7 +478,7 @@ const creditObligations =
         const scheduledMovements =
             getScheduledMovementsForDate(
                 date,
-                movements
+                displayMovements
             );
 
 
@@ -493,8 +505,8 @@ const creditObligations =
         const balance =
             calculateCalendarBalance(
                 date,
-                movements,
-                credits
+                displayMovements,
+                legacyCredits
             );
 
 
@@ -913,15 +925,51 @@ const creditObligations =
         scheduledExpensesForDay.forEach(
             movement => {
 
+                if (movement.purpose === "creditPaymentProjection") {
+                    const item = document.createElement("div");
+                    item.classList.add(
+                        "calendar-programmed-item",
+                        "credit-obligation-calendar-item"
+                    );
+
+                    const label = document.createElement("span");
+                    label.classList.add("credit-obligation-name");
+                    label.textContent = movement.description || "Pago de crédito";
+
+                    const amount = document.createElement("span");
+                    amount.classList.add("credit-obligation-amount");
+                    amount.textContent = `: ${formatCurrency(Number(movement.amount) || 0)}`;
+
+                    item.append(label, amount);
+                    item.classList.add("scheduled-movement-clickable");
+                    item.addEventListener("click", event => {
+                        event.stopPropagation();
+                        const payload = {
+                            creditId: movement.creditId,
+                            amount: Number(movement.amount) || 0,
+                            date: movement.scheduledDate || date,
+                            obligationId: movement.projectionSourceType === "obligation" ? movement.projectionSourceId : null,
+                            planId: movement.projectionSourceType === "plan" ? movement.projectionSourceId : null
+                        };
+                        if (typeof window.cauceOpenCreditPayment === "function") {
+                            window.cauceOpenCreditPayment(payload);
+                        } else {
+                            window.dispatchEvent(new CustomEvent("openCreditPaymentById", {
+                                detail: payload
+                            }));
+                        }
+                    });
+                    scheduledExpensesList.appendChild(item);
+                    return;
+                }
+
                 const dot =
                     createMovementColorDot(
                         movement
                     );
 
-
                 dot.title =
                     movement.description;
-
 
                 scheduledExpensesList
                     .appendChild(
@@ -1399,9 +1447,11 @@ async function renderMonthlyTable(
                     description: movement.description,
                     amount: movement.amount,
                     kind:
-                        movement.type === "income"
-                            ? "Ingreso programado"
-                            : "Egreso programado",
+                        movement.purpose === "creditPaymentProjection"
+                            ? "Pago de TDC / crédito"
+                            : movement.type === "income"
+                                ? "Ingreso programado"
+                                : "Egreso programado",
                     category: movement.category || "",
                     color: movement.labelColor || "gray",
                     status: "scheduled",

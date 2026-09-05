@@ -12,6 +12,10 @@ import {
     calculateCreditObligations
 } from "./creditCalculations.js";
 
+import {
+    getPendingItems
+} from "./pendingService.js";
+
 
 const NOTIFICATION_SETTINGS_ID = "notifications";
 const NOTIFICATION_LOG_KEY = "controlGastosNotificationLog";
@@ -478,6 +482,24 @@ export async function checkDueNotifications() {
     }
 
 
+    try {
+        const pendingItems = await getPendingItems();
+        if (pendingItems.length > 0) {
+            const key = `pending-review:${localDateString()}`;
+            if (!wasDeliveredToday(key)) {
+                notifications.unshift({
+                    key,
+                    title: "Movimientos pendientes",
+                    body: `${pendingItems.length} elemento${pendingItems.length === 1 ? "" : "s"} requieren revisión en Cauce.`,
+                    tag: "cauce-pending-review",
+                    url: "./?open=pending"
+                });
+            }
+        }
+    } catch (error) {
+        console.warn("No se pudieron revisar los pendientes para notificaciones:", error);
+    }
+
     /* Evitar una avalancha si el usuario tiene muchos movimientos cercanos. */
     const batch = notifications.slice(0, 6);
 
@@ -490,7 +512,7 @@ export async function checkDueNotifications() {
                     body: item.body,
                     tag: item.tag,
                     data: {
-                        url: "./"
+                        url: item.url || "./"
                     }
                 }
             );

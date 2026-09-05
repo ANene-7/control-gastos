@@ -5940,3 +5940,639 @@ html[data-theme="dark"] .settings-collapsible[open] > summary {
         width: clamp(132px, 40vw, 165px);
     }
 }
+
+/* =========================================
+   CRÉDITOS V3 · CONFIGURACIÓN INICIAL
+   ========================================= */
+.credit-v3-form {
+    display: grid;
+    gap: 1rem;
+}
+
+.credit-v3-section {
+    border: 1px solid var(--border-color, #dbe3ee);
+    border-radius: 14px;
+    padding: 1rem;
+    background: var(--card-background, transparent);
+}
+
+.credit-v3-section h3 {
+    margin: 0 0 0.9rem;
+    font-size: 0.98rem;
+}
+
+.credit-v3-two-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.credit-v3-live-summary {
+    margin-top: 0.75rem;
+    padding: 0.75rem 0.85rem;
+    border-radius: 10px;
+    background: rgba(88, 139, 255, 0.08);
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.credit-v3-live-summary:empty {
+    display: none;
+}
+
+@media (max-width: 620px) {
+    .credit-v3-two-columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* =========================================
+   CRÉDITOS V3 · DETALLE Y OPERACIONES
+   ========================================= */
+.credit-detail-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin: 1rem 0;
+}
+
+.credit-detail-quick-host:empty {
+    display: none;
+}
+
+.credit-quick-form {
+    margin-bottom: 1rem;
+}
+
+.credit-quick-form .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem;
+}
+
+.credit-quick-form .form-grid label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.credit-quick-form .form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+.credit-quick-form input {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+@media (max-width: 620px) {
+    .credit-quick-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .credit-quick-form .form-grid .full-width {
+        grid-column: auto;
+    }
+}
+
+
+/* =========================================
+   V3.0.0h · Gestión de créditos compacta
+   ========================================= */
+.credits-management-modal-content {
+    width: min(1040px, calc(100% - 32px));
+    max-width: 1040px;
+}
+
+.credit-create-panel {
+    margin-bottom: 18px;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--color-surface);
+}
+
+.credit-create-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 0;
+    background: var(--color-surface-soft);
+    color: var(--color-primary-900);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.credit-create-toggle-icon {
+    transition: transform .18s ease;
+}
+
+.credit-create-toggle.is-open .credit-create-toggle-icon {
+    transform: rotate(180deg);
+}
+
+.credit-create-panel-body {
+    padding: 14px;
+    border-top: 1px solid var(--color-border);
+}
+
+.credit-detail-management-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: -2px 0 14px;
+}
+
+@media (min-width: 761px) {
+    .credits-management-modal-content .credits-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .credits-management-modal-content .credit-list-item {
+        display: grid;
+        grid-template-columns: minmax(150px, 1.15fr) minmax(260px, 2.25fr) minmax(165px, 1.25fr) minmax(220px, 1.5fr) auto;
+        align-items: center;
+        gap: 12px;
+        margin-top: 0;
+        padding: 11px 12px;
+    }
+
+    .credits-management-modal-content .credit-list-header,
+    .credits-management-modal-content .credit-usage-summary,
+    .credits-management-modal-content .credit-next-payment,
+    .credits-management-modal-content .credit-list-data,
+    .credits-management-modal-content .credit-list-actions {
+        margin: 0;
+    }
+
+    .credits-management-modal-content .credit-usage-summary {
+        padding: 9px 10px;
+    }
+
+    .credits-management-modal-content .credit-usage-values {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+        gap: 8px;
+    }
+
+    .credits-management-modal-content .credit-usage-summary small {
+        display: none;
+    }
+
+    .credits-management-modal-content .credit-next-payment {
+        padding: 9px 10px;
+    }
+
+    .credits-management-modal-content .credit-list-data-grid {
+        grid-template-columns: repeat(3, minmax(0,1fr));
+        gap: 6px;
+        margin-top: 0;
+    }
+
+    .credits-management-modal-content .credit-data-block {
+        padding: 7px 8px;
+    }
+
+    .credits-management-modal-content .credit-list-actions {
+        justify-content: flex-end;
+    }
+
+    .credits-management-modal-content .credit-list-actions button {
+        white-space: nowrap;
+    }
+}
+
+@media (max-width: 760px) {
+    .credits-management-modal-content {
+        width: min(720px, calc(100% - 24px));
+    }
+
+    .credit-create-panel-body {
+        padding: 12px;
+    }
+
+    .credit-detail-management-actions {
+        flex-wrap: wrap;
+    }
+}
+
+/* =========================================
+   V3.0.0i · Gestión y edición de créditos
+   ========================================= */
+.credits-management-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.credits-management-toolbar .credits-modal-intro {
+    margin: 0;
+    max-width: 680px;
+}
+
+.credit-form-modal-content {
+    width: min(720px, calc(100% - 30px));
+    max-width: 720px;
+}
+
+.credit-detail-management-actions {
+    margin: 0 0 12px;
+}
+
+.credit-list-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.credit-list-meta > div {
+    min-width: 0;
+}
+
+.credit-list-meta span {
+    font-weight: 700;
+}
+
+.credit-list-meta strong {
+    color: var(--color-primary-900);
+    font-weight: 700;
+}
+
+.credit-usage-values strong,
+.credit-next-payment strong,
+.credit-list-meta strong,
+.credit-detail-summary strong {
+    overflow-wrap: anywhere;
+}
+
+@media (min-width: 761px) {
+    .credits-management-modal-content .credit-list-item {
+        grid-template-columns: minmax(135px, .9fr) minmax(330px, 2.6fr) minmax(185px, 1.25fr) minmax(105px, .72fr) auto;
+        gap: 14px;
+    }
+
+    .credits-management-modal-content .credit-usage-values {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .credits-management-modal-content .credit-list-meta {
+        margin: 0;
+        align-self: center;
+    }
+
+    .credits-management-modal-content .credit-next-payment {
+        min-width: 0;
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .credits-management-modal-content .credit-next-payment small {
+        text-align: left;
+    }
+}
+
+@media (max-width: 760px) {
+    .credits-management-toolbar {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .credits-management-toolbar .primary-button {
+        width: 100%;
+    }
+
+    .credit-usage-values {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .credit-usage-values > div:last-child {
+        grid-column: 1 / -1;
+    }
+
+    .credit-list-meta {
+        margin-top: 10px;
+        padding: 9px 10px;
+        border: 1px solid var(--color-border);
+        border-radius: 8px;
+        background: rgba(15, 23, 42, 0.04);
+    }
+
+    .credit-detail-management-actions {
+        justify-content: flex-end;
+        margin-bottom: 10px;
+    }
+}
+
+/* ================================
+   V3.0.0j · encabezados fijos
+================================ */
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 900;
+}
+
+.modal-content > .modal-header {
+    position: sticky;
+    top: 0;
+    z-index: 12;
+    box-shadow: 0 8px 18px rgba(8, 20, 38, 0.12);
+}
+
+.credit-payment-resolution-modal-content {
+    width: min(620px, calc(100% - 30px));
+}
+
+.credit-payment-resolution-message {
+    margin: 0 0 16px;
+    line-height: 1.5;
+}
+
+.credit-payment-resolution-options {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.credit-payment-resolution-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-background);
+    cursor: pointer;
+}
+
+.credit-payment-resolution-option input {
+    margin-top: 3px;
+}
+
+.credit-payment-resolution-option span {
+    display: grid;
+    gap: 3px;
+}
+
+.credit-payment-resolution-option small {
+    color: var(--color-text-muted);
+    line-height: 1.35;
+}
+
+@media (max-width: 760px) {
+    .app-header {
+        position: sticky;
+        top: 0;
+    }
+
+    .modal-content > .modal-header {
+        top: 0;
+    }
+}
+
+/* ================================
+   V3.0.0l · bandeja de pendientes
+================================ */
+
+.pending-items-button {
+    position: relative;
+}
+
+.pending-items-badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    line-height: 1;
+    background: #b91c1c;
+    color: #fff;
+}
+
+.pending-items-badge.hidden {
+    display: none;
+}
+
+.pending-items-button.has-pending {
+    border-color: rgba(185, 28, 28, 0.45);
+}
+
+.pending-items-modal-content {
+    width: min(880px, calc(100% - 32px));
+    max-height: min(82vh, 820px);
+}
+
+.pending-items-summary {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.pending-items-list {
+    display: grid;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+.pending-item-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-background);
+}
+
+.pending-item-main,
+.pending-item-title-line,
+.pending-item-meta,
+.pending-item-actions {
+    min-width: 0;
+}
+
+.pending-item-title-line {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pending-item-type {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+}
+
+.pending-item-meta {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 5px;
+    color: var(--color-text-muted);
+    font-size: 0.86rem;
+}
+
+.pending-item-overdue {
+    color: #b91c1c;
+    font-weight: 700;
+}
+
+.pending-item-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.compact-button {
+    padding: 8px 11px;
+    min-height: 36px;
+}
+
+.pending-empty-state {
+    display: grid;
+    gap: 4px;
+    padding: 28px 18px;
+    text-align: center;
+    border: 1px dashed var(--color-border);
+    border-radius: 10px;
+    color: var(--color-text-muted);
+}
+
+.pending-empty-state strong {
+    color: var(--color-text);
+}
+
+@media (max-width: 760px) {
+    .pending-item-row {
+        grid-template-columns: 1fr;
+    }
+
+    .pending-item-actions {
+        justify-content: stretch;
+    }
+
+    .pending-item-actions button {
+        flex: 1 1 140px;
+    }
+}
+
+/* ================================
+   V3.0.0o · feedback de uso real
+================================ */
+
+.feedback-modal-content {
+    width: min(720px, calc(100% - 32px));
+    max-height: min(86vh, 860px);
+}
+
+.feedback-intro {
+    margin: 4px 0 0;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.feedback-modal-content textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 150px;
+}
+
+.feedback-diagnostics-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-top: 14px;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.feedback-diagnostics-option input {
+    margin-top: 3px;
+    flex: 0 0 auto;
+}
+
+.feedback-status {
+    min-height: 1.4em;
+    margin-top: 12px;
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+}
+
+.feedback-actions {
+    margin-top: 10px;
+}
+
+
+/* ================================
+   V3.0.0q · feedback sin overflow
+================================ */
+.feedback-modal-content {
+    overflow-x: hidden;
+}
+
+.feedback-modal-content form,
+.feedback-modal-content .form-grid,
+.feedback-modal-content label {
+    min-width: 0;
+    max-width: 100%;
+}
+
+.feedback-modal-content input:not([type="checkbox"]),
+.feedback-modal-content select,
+.feedback-modal-content textarea {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.feedback-diagnostics-option {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.feedback-diagnostics-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    padding: 0;
+    margin: 2px 0 0;
+    flex: 0 0 18px;
+}
+
+.feedback-diagnostics-option span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+/* V3.0.0r · cierre de recurrencias desde Pendientes */
+.danger-subtle-button {
+    border-color: rgba(180, 55, 55, 0.45);
+}
+
+/* V3.0.0s · alcance de edición/eliminación recurrente */
+#recurrenceScopeModal .modal-content {
+    max-width: 560px;
+}
+
+#recurrenceScopeModal .form-actions {
+    flex-wrap: wrap;
+}
