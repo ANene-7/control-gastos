@@ -100,6 +100,53 @@ function applySuggestedColor(category, radioName) {
     }
 }
 
+
+function updateMovementMarkerPreview({ previewId, color, shape, style }) {
+    const preview = document.getElementById(previewId);
+    if (!preview) return;
+
+    const classesToRemove = [...preview.classList].filter(className =>
+        className.startsWith("movement-color-") ||
+        className.startsWith("movement-shape-") ||
+        className.startsWith("movement-marker-")
+    );
+
+    preview.classList.remove(...classesToRemove);
+    preview.classList.add(
+        "movement-marker-preview",
+        `movement-color-${color || "gray"}`,
+        `movement-shape-${shape || "circle"}`,
+        `movement-marker-${style || "solid"}`
+    );
+}
+
+function initializeMovementMarkerPreview({ previewId, colorRadioName, shapeId, styleId }) {
+    const shape = document.getElementById(shapeId);
+    const style = document.getElementById(styleId);
+
+    const refresh = () => {
+        const color =
+            document.querySelector(`input[name="${colorRadioName}"]:checked`)?.value ||
+            "gray";
+
+        updateMovementMarkerPreview({
+            previewId,
+            color,
+            shape: shape?.value || "circle",
+            style: style?.value || "solid"
+        });
+    };
+
+    document.querySelectorAll(`input[name="${colorRadioName}"]`)
+        .forEach(input => input.addEventListener("change", refresh));
+
+    shape?.addEventListener("change", refresh);
+    style?.addEventListener("change", refresh);
+
+    refresh();
+    return refresh;
+}
+
 function generateMovementId() {
 
     return (
@@ -193,6 +240,19 @@ function initializeMovementForm() {
             movementCategory.value,
             "movementLabelColor"
         )
+    );
+
+    const refreshMovementMarkerPreview =
+        initializeMovementMarkerPreview({
+            previewId: "movementMarkerPreview",
+            colorRadioName: "movementLabelColor",
+            shapeId: "movementLabelShape",
+            styleId: "movementLabelStyle"
+        });
+
+    movementCategory?.addEventListener(
+        "change",
+        () => requestAnimationFrame(refreshMovementMarkerPreview)
     );
 
 
@@ -2674,6 +2734,19 @@ function initializeEditMovementModal() {
         )
     );
 
+    const refreshEditMovementMarkerPreview =
+        initializeMovementMarkerPreview({
+            previewId: "editMovementMarkerPreview",
+            colorRadioName: "editMovementLabelColor",
+            shapeId: "editMovementLabelShape",
+            styleId: "editMovementLabelStyle"
+        });
+
+    categoryInput?.addEventListener(
+        "change",
+        () => requestAnimationFrame(refreshEditMovementMarkerPreview)
+    );
+
 
     /*
         Movimiento que estamos editando.
@@ -3145,6 +3218,7 @@ function initializeEditMovementModal() {
         const styleInput = document.getElementById("editMovementLabelStyle");
         if (shapeInput) shapeInput.value = selectedMovement.labelShape || "circle";
         if (styleInput) styleInput.value = selectedMovement.labelStyle || "solid";
+        refreshEditMovementMarkerPreview();
 
 
         creditSelector.value =

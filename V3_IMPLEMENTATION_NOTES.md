@@ -62,3 +62,14 @@ Hotfix de estabilidad sobre V3.0.0s.
 - Movimientos fijos desde Configuración permiten elegir color, forma y estilo; nómina usa rombo verde por defecto.
 - Compatibilidad hacia atrás: movimientos existentes sin forma/estilo siguen como círculo relleno.
 - Cache v49.
+
+## V3.0.1e
+- Vista previa en vivo del símbolo del calendario al registrar y editar movimientos.
+- Vista previa también en movimientos fijos desde Configuración.
+- La previsualización responde a color, forma y relleno/contorno.
+- Cache v50.
+
+## V3.0.1f
+- Corrige la cascada CSS de la vista previa del símbolo.
+- El color seleccionado ahora se refleja inmediatamente junto con forma y estilo.
+- Cache v51.

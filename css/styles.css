@@ -6752,3 +6752,76 @@ html[data-theme="dark"] .credit-purchase-line .monthly-table-description {
         grid-template-columns: 1fr;
     }
 }
+
+/* V3.0.1e · vista previa de símbolos */
+.movement-marker-preview-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-surface-soft);
+}
+
+.movement-marker-preview-card.compact { margin-top: 10px; }
+
+.movement-marker-preview-label {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.movement-marker-preview {
+    position: relative;
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    min-height: 24px;
+    background: var(--marker-color);
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.movement-marker-preview.movement-shape-triangle {
+    width: 26px;
+    min-width: 26px;
+    height: 23px;
+    min-height: 23px;
+}
+
+.movement-marker-preview.movement-shape-star {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+}
+
+.movement-marker-preview.movement-marker-outline::after {
+    inset: 4px;
+}
+
+html[data-theme="dark"] .movement-marker-preview-card {
+    background: var(--color-surface-soft);
+    border-color: var(--color-border-strong);
+}
+
+/* V3.0.1f · prioridad correcta del color en la vista previa */
+.movement-marker-preview:not(
+    .movement-color-blue,
+    .movement-color-green,
+    .movement-color-yellow,
+    .movement-color-red,
+    .movement-color-purple,
+    .movement-color-gray,
+    .movement-color-orange,
+    .movement-color-teal,
+    .movement-color-pink,
+    .movement-color-cyan,
+    .movement-color-lime,
+    .movement-color-brown
+) {
+    --marker-color: #9ca3af;
+}

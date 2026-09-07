@@ -337,6 +337,7 @@ export async function initializeUI(settings) {
     const fixedMovementLabelColor = document.getElementById("fixedMovementLabelColor");
     const fixedMovementLabelShape = document.getElementById("fixedMovementLabelShape");
     const fixedMovementLabelStyle = document.getElementById("fixedMovementLabelStyle");
+    const fixedMovementMarkerPreview = document.getElementById("fixedMovementMarkerPreview");
 
     const fixedMovementList =
         document.getElementById(
@@ -2137,6 +2138,30 @@ export async function initializeUI(settings) {
         fixedMovementCreditId.value = selectedId || "";
     }
 
+    function refreshFixedMovementMarkerPreview() {
+        if (!fixedMovementMarkerPreview) return;
+
+        const classesToRemove = [...fixedMovementMarkerPreview.classList].filter(className =>
+            className.startsWith("movement-color-") ||
+            className.startsWith("movement-shape-") ||
+            className.startsWith("movement-marker-")
+        );
+
+        fixedMovementMarkerPreview.classList.remove(...classesToRemove);
+        fixedMovementMarkerPreview.classList.add(
+            "movement-marker-preview",
+            `movement-color-${fixedMovementLabelColor?.value || "blue"}`,
+            `movement-shape-${fixedMovementLabelShape?.value || "circle"}`,
+            `movement-marker-${fixedMovementLabelStyle?.value || "solid"}`
+        );
+    }
+
+    [fixedMovementLabelColor, fixedMovementLabelShape, fixedMovementLabelStyle]
+        .filter(Boolean)
+        .forEach(control =>
+            control.addEventListener("change", refreshFixedMovementMarkerPreview)
+        );
+
     function syncFixedMovementCreditFields() {
         const enabled = fixedMovementType?.value === "expense" && fixedMovementPaymentMethod?.value === "credit";
         fixedMovementCreditContainer?.classList.toggle("hidden", !enabled);
@@ -2148,6 +2173,7 @@ export async function initializeUI(settings) {
         syncFixedMovementCreditFields();
     });
     fixedMovementType?.addEventListener("change", syncFixedMovementCreditFields);
+    refreshFixedMovementMarkerPreview();
 
     function resetFixedMovementForm() {
 
@@ -2165,6 +2191,7 @@ export async function initializeUI(settings) {
         if (fixedMovementLabelColor) fixedMovementLabelColor.value = "blue";
         if (fixedMovementLabelShape) fixedMovementLabelShape.value = "circle";
         if (fixedMovementLabelStyle) fixedMovementLabelStyle.value = "solid";
+        refreshFixedMovementMarkerPreview();
         syncFixedMovementCreditFields();
         cancelFixedMovementEditButton.classList.add("hidden");
 
@@ -2231,6 +2258,7 @@ export async function initializeUI(settings) {
                 if (fixedMovementLabelColor) fixedMovementLabelColor.value = rule.labelColor || "blue";
                 if (fixedMovementLabelShape) fixedMovementLabelShape.value = rule.labelShape || "circle";
                 if (fixedMovementLabelStyle) fixedMovementLabelStyle.value = rule.labelStyle || "solid";
+                refreshFixedMovementMarkerPreview();
                 syncFixedMovementCreditFields();
                 cancelFixedMovementEditButton.classList.remove("hidden");
                 fixedMovementDescription.focus();
