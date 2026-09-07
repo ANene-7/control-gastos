@@ -729,6 +729,14 @@ async function saveMovement() {
             'input[name="movementLabelColor"]:checked'
         ).value;
 
+    const labelShape =
+        document.getElementById("movementLabelShape")?.value ||
+        "circle";
+
+    const labelStyle =
+        document.getElementById("movementLabelStyle")?.value ||
+        "solid";
+
 
     /*
         Validaciones básicas.
@@ -929,6 +937,10 @@ async function saveMovement() {
 
         labelColor,
 
+        labelShape,
+
+        labelStyle,
+
 
         notes,
 
@@ -1039,6 +1051,7 @@ function chooseRecurrenceScope({ action = "modificar", description = "este movim
     return new Promise(resolve => {
         const finish = value => {
             modal.classList.add("hidden");
+            modal.removeAttribute("aria-modal");
             singleButton.onclick = null;
             futureButton.onclick = null;
             cancelButton.onclick = null;
@@ -1050,6 +1063,10 @@ function chooseRecurrenceScope({ action = "modificar", description = "este movim
         cancelButton.onclick = () => finish(null);
         closeButton.onclick = () => finish(null);
         modal.classList.remove("hidden");
+        modal.setAttribute("aria-modal", "true");
+        requestAnimationFrame(() => {
+            singleButton.focus();
+        });
     });
 }
 
@@ -1151,6 +1168,9 @@ function initializeScheduledMovementModal() {
         document.getElementById(
             "scheduledMovementCompletedDate"
         );
+
+    const creditPurchaseInfo =
+        document.getElementById("scheduledMovementCreditPurchaseInfo");
 
 
     /*
@@ -1413,6 +1433,23 @@ function initializeScheduledMovementModal() {
 
                 scheduledDateElement.textContent =
                     occurrenceDate;
+
+                if (creditPurchaseInfo) {
+                    const isCreditPurchase =
+                        selectedMovement.type === "expense" &&
+                        selectedMovement.paymentMethod === "credit" &&
+                        selectedMovement.purpose !== "creditPayment";
+
+                    if (isCreditPurchase && selectedMovement.creditId) {
+                        const credit = await getRecord("credits", selectedMovement.creditId);
+                        creditPurchaseInfo.textContent =
+                            `Compra con crédito - ${credit?.name || "Crédito"}`;
+                        creditPurchaseInfo.classList.remove("hidden");
+                    } else {
+                        creditPurchaseInfo.textContent = "";
+                        creditPurchaseInfo.classList.add("hidden");
+                    }
+                }
 
 
                 /*
@@ -3104,6 +3141,11 @@ function initializeEditMovementModal() {
             currentColorRadio.checked = true;
         }
 
+        const shapeInput = document.getElementById("editMovementLabelShape");
+        const styleInput = document.getElementById("editMovementLabelStyle");
+        if (shapeInput) shapeInput.value = selectedMovement.labelShape || "circle";
+        if (styleInput) styleInput.value = selectedMovement.labelStyle || "solid";
+
 
         creditSelector.value =
             selectedMovement.creditId ||
@@ -3277,6 +3319,16 @@ function initializeEditMovementModal() {
                     selectedMovement.labelColor ||
                     "gray";
 
+                const labelShape =
+                    document.getElementById("editMovementLabelShape")?.value ||
+                    selectedMovement.labelShape ||
+                    "circle";
+
+                const labelStyle =
+                    document.getElementById("editMovementLabelStyle")?.value ||
+                    selectedMovement.labelStyle ||
+                    "solid";
+
 
                 if (!description) {
 
@@ -3423,6 +3475,10 @@ function initializeEditMovementModal() {
 
 
                     labelColor,
+
+                    labelShape,
+
+                    labelStyle,
 
 
                     notes:
@@ -4603,7 +4659,8 @@ function initializeMonthlyMovementsModal() {
         movement,
         date,
         creditName = null,
-        scheduled = false
+        scheduled = false,
+        projection = false
     }) {
 
         const row =
@@ -4680,11 +4737,15 @@ function initializeMonthlyMovementsModal() {
                 "credit"
             &&
             creditName
+            &&
+            movement.purpose !== "creditPayment"
         ) {
 
             details.push(
-                creditName
+                `Compra con crédito - ${creditName}`
             );
+
+            row.classList.add("monthly-credit-purchase");
 
         }
 
@@ -4712,6 +4773,14 @@ function initializeMonthlyMovementsModal() {
                 "Periódico"
             );
 
+        }
+
+        if (projection) {
+            details.push(
+                movement.projectionLabel ||
+                "Pago de crédito previsto"
+            );
+            row.classList.add("monthly-credit-projection");
         }
 
 
@@ -4783,6 +4852,13 @@ function initializeMonthlyMovementsModal() {
                 "monthly-movement-expense"
             );
 
+            if (
+                movement.paymentMethod === "credit" &&
+                movement.purpose !== "creditPayment"
+            ) {
+                amount.classList.add("monthly-credit-purchase-amount");
+            }
+
         }
 
 
@@ -4805,7 +4881,34 @@ function initializeMonthlyMovementsModal() {
             Reutilizar los modales existentes.
         */
 
-        if (scheduled) {
+        if (projection) {
+
+            row.classList.add(
+                "monthly-movement-clickable"
+            );
+
+            row.addEventListener(
+                "click",
+                () => {
+                    closeModal();
+                    const payload = {
+                        creditId: movement.creditId,
+                        sourceType: movement.projectionSourceType || null,
+                        sourceId: movement.projectionSourceId || null,
+                        amount: movement.amount,
+                        date
+                    };
+                    if (typeof window.cauceOpenCreditPayment === "function") {
+                        window.cauceOpenCreditPayment(payload);
+                    } else {
+                        window.dispatchEvent(
+                            new CustomEvent("openCreditPaymentById", { detail: payload })
+                        );
+                    }
+                }
+            );
+
+        } else if (scheduled) {
 
             row.classList.add(
                 "monthly-movement-clickable"
@@ -5048,6 +5151,36 @@ function initializeMonthlyMovementsModal() {
     }
 
 
+    function buildRecurringMonthlyGroups(entries) {
+        const groups = new Map();
+        entries.forEach(entry => {
+            const sourceId = entry.movement.sourceScheduledMovementId ? String(entry.movement.sourceScheduledMovementId) : (entry.scheduled && entry.movement.recurrence ? String(entry.movement.id) : null);
+            if (!sourceId) return;
+            if (!groups.has(sourceId)) groups.set(sourceId, { movement: entry.movement, creditName: entry.creditName, completed:0, pending:0, total:0 });
+            const group=groups.get(sourceId); group.total++; entry.scheduled ? group.pending++ : group.completed++;
+            if (entry.scheduled && entry.movement.recurrence) { group.movement=entry.movement; group.creditName=entry.creditName; }
+        });
+        return groups;
+    }
+
+    function createRecurringSummaryRow(group) {
+        const row=document.createElement("div"); row.className="monthly-movement-row monthly-recurring-summary";
+        const badge=document.createElement("span"); badge.className="monthly-movement-date"; badge.textContent="↻";
+        const info=document.createElement("div"); info.className="monthly-movement-info";
+        const title=document.createElement("strong"); title.textContent=group.movement.description || "Movimiento recurrente";
+        const detail=document.createElement("small");
+        const parts=[`${group.completed} realizadas`,`${group.pending} pendientes`,`${group.total} en el mes`];
+        const isCreditPurchase = group.movement.paymentMethod === "credit" && group.movement.purpose !== "creditPayment";
+        if(group.creditName) parts.push(isCreditPurchase ? `Compra con crédito - ${group.creditName}` : group.creditName);
+        detail.textContent=parts.join(" · "); info.append(title,detail);
+        const amount=document.createElement("strong"); amount.className="monthly-movement-amount"; amount.textContent=group.movement.type === "income" ? formatCurrency(group.movement.amount) : `-${formatCurrency(group.movement.amount)}`; amount.title="Monto por ocurrencia"; amount.classList.add(group.movement.type === "income" ? "monthly-movement-income" : "monthly-movement-expense");
+        if (isCreditPurchase) {
+            row.classList.add("monthly-credit-purchase");
+            amount.classList.add("monthly-credit-purchase-amount");
+        }
+        row.append(badge,info,amount); return row;
+    }
+
     function renderLoadedMovements() {
 
         content.innerHTML = "";
@@ -5059,17 +5192,18 @@ function initializeMonthlyMovementsModal() {
             );
 
 
-        const completedEntries =
-            filteredEntries.filter(
-                entry => !entry.scheduled
-            );
-
-
-        const scheduledEntries =
-            filteredEntries.filter(
-                entry => entry.scheduled
-            );
-
+        const recurringGroups = buildRecurringMonthlyGroups(filteredEntries);
+        const recurringSourceIds = new Set(recurringGroups.keys());
+        const isRecurringEntry = entry => {
+            const sourceId = entry.movement.sourceScheduledMovementId ? String(entry.movement.sourceScheduledMovementId) : (entry.scheduled && entry.movement.recurrence ? String(entry.movement.id) : null);
+            return sourceId && recurringSourceIds.has(sourceId);
+        };
+        const completedEntries = filteredEntries.filter(entry => !entry.scheduled && !isRecurringEntry(entry));
+        const projectionEntries = filteredEntries.filter(entry => entry.projection);
+        const scheduledEntries = filteredEntries.filter(entry => entry.scheduled && !entry.projection && !isRecurringEntry(entry));
+        if (recurringGroups.size > 0) {
+            const section=createSection("Recurrentes"); recurringGroups.forEach(group => section.appendChild(createRecurringSummaryRow(group))); content.appendChild(section);
+        }
 
         if (completedEntries.length > 0) {
 
@@ -5085,6 +5219,22 @@ function initializeMonthlyMovementsModal() {
 
             });
 
+
+            content.appendChild(section);
+
+        }
+
+
+        if (projectionEntries.length > 0) {
+
+            const section =
+                createSection("Pagos de crédito previstos");
+
+            projectionEntries.forEach(entry => {
+                section.appendChild(
+                    createMovementRow(entry)
+                );
+            });
 
             content.appendChild(section);
 
@@ -5111,7 +5261,7 @@ function initializeMonthlyMovementsModal() {
         }
 
 
-        const total = filteredEntries.length;
+        const total = recurringGroups.size + completedEntries.length + projectionEntries.length + scheduledEntries.length;
 
         resultCount.textContent =
             `${total} ${
@@ -5199,6 +5349,9 @@ function initializeMonthlyMovementsModal() {
                     await getAllRecords(
                         "credits"
                     );
+
+                const creditProjections =
+                    await getCreditProjectionMovements();
 
 
                 title.textContent =
@@ -5309,6 +5462,43 @@ function initializeMonthlyMovementsModal() {
                     }
 
                 }
+
+
+                creditProjections
+                    .filter(projection =>
+                        projection.scheduledDate?.startsWith(monthPrefix)
+                    )
+                    .forEach(projection => {
+                        const credit =
+                            credits.find(item =>
+                                String(item.id) === String(projection.creditId)
+                            );
+
+                        let projectionLabel = "Pago de crédito previsto";
+                        if (projection.projectionSourceType === "plan") {
+                            projectionLabel = "Cuota de plan";
+                        } else if (projection.projectionSourceType === "obligation") {
+                            projectionLabel = "Obligación de crédito";
+                        } else if (projection.projectionSourceType === "open_period") {
+                            projectionLabel = "Cargos del periodo";
+                        } else if (projection.projectionSourceType === "scheduled_card_charges") {
+                            projectionLabel = "Compras programadas con crédito";
+                        }
+
+                        entries.push({
+                            movement: {
+                                ...projection,
+                                category: "Deudas / créditos",
+                                paymentMethod: "debit",
+                                purpose: "creditPaymentProjection",
+                                projectionLabel
+                            },
+                            date: projection.scheduledDate,
+                            creditName: credit?.name || projection.creditName || null,
+                            scheduled: true,
+                            projection: true
+                        });
+                    });
 
 
                 entries.sort((a, b) =>

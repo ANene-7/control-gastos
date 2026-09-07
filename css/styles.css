@@ -6576,3 +6576,179 @@ html[data-theme="dark"] .settings-collapsible[open] > summary {
 #recurrenceScopeModal .form-actions {
     flex-wrap: wrap;
 }
+
+/* V3.0.1a: contraste oscuro y resumen recurrente */
+html[data-theme="dark"] .credit-list-item,html[data-theme="dark"] .credit-usage-summary,html[data-theme="dark"] .credit-next-payment,html[data-theme="dark"] .credit-list-data,html[data-theme="dark"] .credit-data-block,html[data-theme="dark"] .credit-v3-section,html[data-theme="dark"] .credit-v3-live-summary{background-color:var(--color-surface-soft);border-color:var(--color-border-strong);color:var(--color-text)}
+html[data-theme="dark"] .credit-list-header strong,html[data-theme="dark"] .credit-usage-values strong,html[data-theme="dark"] .credit-data-block strong,html[data-theme="dark"] .credit-next-payment strong,html[data-theme="dark"] .credit-next-payment span,html[data-theme="dark"] .credit-list-data strong,html[data-theme="dark"] .credit-list-data span{color:var(--color-text)!important}
+html[data-theme="dark"] .credit-type-label,html[data-theme="dark"] .credit-usage-values span,html[data-theme="dark"] .credit-usage-summary small,html[data-theme="dark"] .credit-data-block span,html[data-theme="dark"] .credit-next-payment small{color:var(--color-text-secondary)!important}
+html[data-theme="dark"] .credit-utilization-track{background:#2a3b54}.monthly-recurring-summary .monthly-movement-date{font-size:1.15rem;font-weight:800}
+
+
+/* =========================================
+   V3.0.1c · capas de modales encadenados
+   Los diálogos de alcance/confirmación deben
+   quedar por encima del modal que los invoca.
+   ========================================= */
+#recurrenceScopeModal {
+    z-index: 1400;
+}
+
+#confirmModal {
+    z-index: 1500;
+}
+
+#datePromptModal {
+    z-index: 1500;
+}
+
+
+/* =========================================
+   V3.0.1d · lenguaje visual del calendario
+   ========================================= */
+
+.movement-color-dot {
+    --marker-color: #9ca3af;
+    position: relative;
+    width: 9px;
+    height: 9px;
+    min-width: 9px;
+    min-height: 9px;
+    background: var(--marker-color);
+    overflow: hidden;
+}
+
+.movement-color-blue { --marker-color: #3b82f6; background: var(--marker-color); }
+.movement-color-green { --marker-color: #22c55e; background: var(--marker-color); }
+.movement-color-yellow { --marker-color: #eab308; background: var(--marker-color); }
+.movement-color-red { --marker-color: #ef4444; background: var(--marker-color); }
+.movement-color-purple { --marker-color: #a855f7; background: var(--marker-color); }
+.movement-color-gray { --marker-color: #9ca3af; background: var(--marker-color); }
+.movement-color-orange { --marker-color: #f97316; background: var(--marker-color); }
+.movement-color-teal { --marker-color: #14b8a6; background: var(--marker-color); }
+.movement-color-pink { --marker-color: #ec4899; background: var(--marker-color); }
+.movement-color-cyan { --marker-color: #06b6d4; background: var(--marker-color); }
+.movement-color-lime { --marker-color: #84cc16; background: var(--marker-color); }
+.movement-color-brown { --marker-color: #9a6b4a; background: var(--marker-color); }
+
+.movement-shape-circle { border-radius: 50%; clip-path: none; }
+.movement-shape-square { border-radius: 1px; clip-path: none; }
+.movement-shape-diamond {
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+}
+.movement-shape-triangle {
+    width: 10px;
+    min-width: 10px;
+    height: 9px;
+    min-height: 9px;
+    border-radius: 0;
+    clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+.movement-shape-star {
+    width: 11px;
+    min-width: 11px;
+    height: 11px;
+    min-height: 11px;
+    border-radius: 0;
+    clip-path: polygon(
+        50% 0%, 61% 34%, 98% 35%, 68% 56%, 79% 91%,
+        50% 70%, 21% 91%, 32% 56%, 2% 35%, 39% 34%
+    );
+}
+
+.movement-marker-outline {
+    background: var(--marker-color);
+}
+
+.movement-marker-outline::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    background: var(--color-surface);
+    border-radius: inherit;
+    clip-path: inherit;
+}
+
+.calendar-day.outside-month .movement-marker-outline::after {
+    background: var(--color-surface-soft);
+}
+
+/* Colores disponibles en el selector */
+.color-orange { background-color: #f97316; }
+.color-teal { background-color: #14b8a6; }
+.color-pink { background-color: #ec4899; }
+.color-cyan { background-color: #06b6d4; }
+.color-lime { background-color: #84cc16; }
+.color-brown { background-color: #9a6b4a; }
+
+.movement-marker-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.movement-marker-options label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.movement-marker-options label > span {
+    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.movement-marker-options select {
+    width: 100%;
+}
+
+.movement-marker-options.compact {
+    margin-top: 0;
+}
+
+/* =========================================
+   Compras con crédito claramente visibles
+   ========================================= */
+
+.credit-purchase-badge {
+    margin: 4px 0 18px;
+    padding: 9px 12px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 9px;
+    background: rgba(59, 130, 246, 0.09);
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+html[data-theme="dark"] .credit-purchase-badge {
+    background: rgba(96, 165, 250, 0.12);
+    border-color: rgba(96, 165, 250, 0.4);
+    color: #93c5fd;
+}
+
+.monthly-credit-purchase .monthly-movement-info small,
+.monthly-credit-purchase-amount,
+.credit-purchase-meta,
+.credit-purchase-line .monthly-table-description {
+    color: #2563eb !important;
+}
+
+html[data-theme="dark"] .monthly-credit-purchase .monthly-movement-info small,
+html[data-theme="dark"] .monthly-credit-purchase-amount,
+html[data-theme="dark"] .credit-purchase-meta,
+html[data-theme="dark"] .credit-purchase-line .monthly-table-description {
+    color: #93c5fd !important;
+}
+
+.monthly-credit-projection {
+    border-left: 3px solid var(--color-credit);
+}
+
+@media (max-width: 560px) {
+    .movement-marker-options {
+        grid-template-columns: 1fr;
+    }
+}

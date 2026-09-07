@@ -733,6 +733,33 @@
 
                         </label>
 
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="orange"><span class="color-dot color-orange"></span></label>
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="teal"><span class="color-dot color-teal"></span></label>
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="pink"><span class="color-dot color-pink"></span></label>
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="cyan"><span class="color-dot color-cyan"></span></label>
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="lime"><span class="color-dot color-lime"></span></label>
+                        <label class="color-option"><input type="radio" name="movementLabelColor" value="brown"><span class="color-dot color-brown"></span></label>
+
+                    </div>
+
+                    <div class="movement-marker-options">
+                        <label>
+                            <span>Forma</span>
+                            <select id="movementLabelShape">
+                                <option value="circle">Círculo</option>
+                                <option value="square">Cuadrado</option>
+                                <option value="diamond">Rombo</option>
+                                <option value="triangle">Triángulo</option>
+                                <option value="star">Estrella</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Estilo</span>
+                            <select id="movementLabelStyle">
+                                <option value="solid">Relleno</option>
+                                <option value="outline">Contorno</option>
+                            </select>
+                        </label>
                     </div>
 
                 </div>
@@ -1014,7 +1041,44 @@
                         <select id="fixedMovementPaymentMethod">
                             <option value="debit">Débito</option>
                             <option value="cash">Efectivo</option>
+                            <option value="credit">Tarjeta de crédito</option>
                         </select>
+                    </div>
+
+                    <div class="form-group hidden" id="fixedMovementCreditContainer">
+                        <label for="fixedMovementCreditId">Crédito</label>
+                        <select id="fixedMovementCreditId"><option value="">Selecciona un crédito</option></select>
+                        <small>Las compras recurrentes con TDC se proyectarán hacia la FLP correspondiente.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="fixedMovementLabelColor">Color del símbolo</label>
+                        <select id="fixedMovementLabelColor">
+                            <option value="blue">Azul</option>
+                            <option value="green">Verde</option>
+                            <option value="yellow">Amarillo</option>
+                            <option value="red">Rojo</option>
+                            <option value="purple">Morado</option>
+                            <option value="gray">Gris</option>
+                            <option value="orange">Naranja</option>
+                            <option value="teal">Turquesa</option>
+                            <option value="pink">Rosa</option>
+                            <option value="cyan">Cian</option>
+                            <option value="lime">Lima</option>
+                            <option value="brown">Café</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="fixedMovementLabelShape">Símbolo del calendario</label>
+                        <div class="movement-marker-options compact">
+                            <label><span>Forma</span><select id="fixedMovementLabelShape">
+                                <option value="circle">Círculo</option><option value="square">Cuadrado</option>
+                                <option value="diamond">Rombo</option><option value="triangle">Triángulo</option>
+                                <option value="star">Estrella</option>
+                            </select></label>
+                            <label><span>Estilo</span><select id="fixedMovementLabelStyle">
+                                <option value="solid">Relleno</option><option value="outline">Contorno</option>
+                            </select></label>
+                        </div>
                     </div>
                 </div>
 
@@ -1644,6 +1708,8 @@
         </div>
 
 
+        <div id="scheduledMovementCreditPurchaseInfo" class="credit-purchase-badge hidden"></div>
+
         <div class="form-group">
 
             <label
@@ -1920,6 +1986,22 @@
                     <label class="color-option"><input type="radio" name="editMovementLabelColor" value="red"><span class="color-dot color-red"></span></label>
                     <label class="color-option"><input type="radio" name="editMovementLabelColor" value="purple"><span class="color-dot color-purple"></span></label>
                     <label class="color-option"><input type="radio" name="editMovementLabelColor" value="gray"><span class="color-dot color-gray"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="orange"><span class="color-dot color-orange"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="teal"><span class="color-dot color-teal"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="pink"><span class="color-dot color-pink"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="cyan"><span class="color-dot color-cyan"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="lime"><span class="color-dot color-lime"></span></label>
+                    <label class="color-option"><input type="radio" name="editMovementLabelColor" value="brown"><span class="color-dot color-brown"></span></label>
+                </div>
+                <div class="movement-marker-options">
+                    <label><span>Forma</span><select id="editMovementLabelShape">
+                        <option value="circle">Círculo</option><option value="square">Cuadrado</option>
+                        <option value="diamond">Rombo</option><option value="triangle">Triángulo</option>
+                        <option value="star">Estrella</option>
+                    </select></label>
+                    <label><span>Estilo</span><select id="editMovementLabelStyle">
+                        <option value="solid">Relleno</option><option value="outline">Contorno</option>
+                    </select></label>
                 </div>
             </div>
 

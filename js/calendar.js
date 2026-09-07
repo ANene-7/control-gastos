@@ -1427,12 +1427,29 @@ async function renderMonthlyTable(
                     kind = "Compra a crédito";
                 }
 
+                const relatedCredit =
+                    credits.find(item =>
+                        String(item.id) === String(movement.creditId)
+                    );
+
+                const isCreditPurchase =
+                    movement.paymentMethod === "credit" &&
+                    movement.type === "expense" &&
+                    movement.purpose !== "creditPayment";
+
+                if (isCreditPurchase) {
+                    kind = `Compra con crédito - ${relatedCredit?.name || "Crédito"}`;
+                }
+
                 events.push({
                     description: movement.description,
                     amount: movement.amount,
                     kind,
                     category: movement.category || "",
                     color: movement.labelColor || "gray",
+                    shape: movement.labelShape || "circle",
+                    markerStyle: movement.labelStyle || "solid",
+                    creditPurchase: isCreditPurchase,
                     status: "completed",
                     impact: getTableMovementImpact(movement)
                 });
@@ -1443,22 +1460,42 @@ async function renderMonthlyTable(
         scheduledMovements.forEach(
             movement => {
 
-                events.push({
-                    description: movement.description,
-                    amount: movement.amount,
-                    kind:
-                        movement.purpose === "creditPaymentProjection"
+                const relatedCredit =
+                    credits.find(item =>
+                        String(item.id) === String(movement.creditId)
+                    );
+
+                const isCreditPurchase =
+                    movement.paymentMethod === "credit" &&
+                    movement.type === "expense" &&
+                    movement.purpose !== "creditPaymentProjection" &&
+                    movement.purpose !== "creditPayment";
+
+                const kind =
+                    isCreditPurchase
+                        ? `Compra con crédito - ${relatedCredit?.name || "Crédito"}`
+                        : movement.purpose === "creditPaymentProjection"
                             ? "Pago de TDC / crédito"
                             : movement.type === "income"
                                 ? "Ingreso programado"
-                                : "Egreso programado",
+                                : "Egreso programado";
+
+                events.push({
+                    description: movement.description,
+                    amount: movement.amount,
+                    kind,
                     category: movement.category || "",
                     color: movement.labelColor || "gray",
+                    shape: movement.labelShape || "circle",
+                    markerStyle: movement.labelStyle || "solid",
+                    creditPurchase: isCreditPurchase,
                     status: "scheduled",
                     impact:
-                        movement.type === "income"
-                            ? movement.amount
-                            : -movement.amount
+                        isCreditPurchase
+                            ? 0
+                            : movement.type === "income"
+                                ? movement.amount
+                                : -movement.amount
                 });
 
             }
@@ -1472,6 +1509,9 @@ async function renderMonthlyTable(
                     kind: "Pago de crédito previsto",
                     category: "Deudas / créditos",
                     color: "gray",
+                    shape: "diamond",
+                    markerStyle: "outline",
+                    creditPurchase: false,
                     status: "scheduled",
                     impact: -obligation.pendingAmount
                 });
@@ -1583,7 +1623,9 @@ async function renderMonthlyTable(
                     document.createElement("span");
                 dot.classList.add(
                     "movement-color-dot",
-                    `movement-color-${eventData.color}`
+                    `movement-color-${eventData.color}`,
+                    `movement-shape-${eventData.shape || "circle"}`,
+                    `movement-marker-${eventData.markerStyle || "solid"}`
                 );
 
                 const movementText =
@@ -1611,6 +1653,11 @@ async function renderMonthlyTable(
                     movementLine.classList.add(
                         "scheduled"
                     );
+                }
+
+                if (eventData.creditPurchase) {
+                    movementLine.classList.add("credit-purchase-line");
+                    meta.classList.add("credit-purchase-meta");
                 }
 
                 movementText.appendChild(
@@ -1772,7 +1819,9 @@ function createMovementColorDot(
 
 
     dot.classList.add(
-        `movement-color-${color}`
+        `movement-color-${color}`,
+        `movement-shape-${movement.labelShape || "circle"}`,
+        `movement-marker-${movement.labelStyle || "solid"}`
     );
 
 

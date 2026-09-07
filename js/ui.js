@@ -332,6 +332,12 @@ export async function initializeUI(settings) {
             "fixedMovementPaymentMethod"
         );
 
+    const fixedMovementCreditContainer = document.getElementById("fixedMovementCreditContainer");
+    const fixedMovementCreditId = document.getElementById("fixedMovementCreditId");
+    const fixedMovementLabelColor = document.getElementById("fixedMovementLabelColor");
+    const fixedMovementLabelShape = document.getElementById("fixedMovementLabelShape");
+    const fixedMovementLabelStyle = document.getElementById("fixedMovementLabelStyle");
+
     const fixedMovementList =
         document.getElementById(
             "fixedMovementList"
@@ -1187,26 +1193,21 @@ export async function initializeUI(settings) {
                 }
 
 
+                const isCurrentCauceBackup =
+                    backup.app === "Cauce" &&
+                    backup.version === 3;
+
+                const isLegacyBackup =
+                    backup.app === "Control de Gastos" &&
+                    [1, 2].includes(backup.version);
+
                 if (
-                    backup.app !==
-                        "Control de Gastos"
+                    !isCurrentCauceBackup &&
+                    !isLegacyBackup
                 ) {
 
                     throw new Error(
                         "El archivo no corresponde a un respaldo compatible con Cauce."
-                    );
-
-                }
-
-
-                if (
-                    ![1, 2].includes(
-                        backup.version
-                    )
-                ) {
-
-                    throw new Error(
-                        "La versión del respaldo no es compatible."
                     );
 
                 }
@@ -2123,6 +2124,31 @@ export async function initializeUI(settings) {
     };
 
 
+    async function refreshFixedMovementCreditOptions(selectedId = "") {
+        if (!fixedMovementCreditId) return;
+        const credits = (await getAllRecords("credits")).filter(credit => credit.active !== false);
+        fixedMovementCreditId.innerHTML = '<option value="">Selecciona un crédito</option>';
+        credits.forEach(credit => {
+            const option = document.createElement("option");
+            option.value = credit.id;
+            option.textContent = credit.name || "Crédito";
+            fixedMovementCreditId.appendChild(option);
+        });
+        fixedMovementCreditId.value = selectedId || "";
+    }
+
+    function syncFixedMovementCreditFields() {
+        const enabled = fixedMovementType?.value === "expense" && fixedMovementPaymentMethod?.value === "credit";
+        fixedMovementCreditContainer?.classList.toggle("hidden", !enabled);
+        if (!enabled && fixedMovementCreditId) fixedMovementCreditId.value = "";
+    }
+
+    fixedMovementPaymentMethod?.addEventListener("change", async () => {
+        if (fixedMovementPaymentMethod.value === "credit") await refreshFixedMovementCreditOptions(fixedMovementCreditId?.value || "");
+        syncFixedMovementCreditFields();
+    });
+    fixedMovementType?.addEventListener("change", syncFixedMovementCreditFields);
+
     function resetFixedMovementForm() {
 
         if (!fixedMovementForm) {
@@ -2135,6 +2161,11 @@ export async function initializeUI(settings) {
         if (fixedMovementCategory) fixedMovementCategory.value = "";
         fixedMovementFrequency.value = "monthly";
         fixedMovementPaymentMethod.value = "debit";
+        if (fixedMovementCreditId) fixedMovementCreditId.value = "";
+        if (fixedMovementLabelColor) fixedMovementLabelColor.value = "blue";
+        if (fixedMovementLabelShape) fixedMovementLabelShape.value = "circle";
+        if (fixedMovementLabelStyle) fixedMovementLabelStyle.value = "solid";
+        syncFixedMovementCreditFields();
         cancelFixedMovementEditButton.classList.add("hidden");
 
     }
@@ -2148,7 +2179,7 @@ export async function initializeUI(settings) {
 
         const movements = await getAllRecords("movements");
         const rules = movements
-            .filter(item => item.kind === "fixed")
+            .filter(item => item.kind === "fixed" && item.recurrence && !item.sourceRescheduledMovementId)
             .sort((a, b) => (a.description || "").localeCompare(b.description || "", "es"));
 
         fixedMovementList.innerHTML = "";
@@ -2173,8 +2204,7 @@ export async function initializeUI(settings) {
             const typeText =
                 rule.type === "income" ? "Ingreso" : "Egreso";
 
-            const methodText =
-                rule.paymentMethod === "cash" ? "Efectivo" : "Débito";
+            const methodText = rule.paymentMethod === "cash" ? "Efectivo" : rule.paymentMethod === "credit" ? "Tarjeta de crédito" : "Débito";
 
             item.innerHTML = `
                 <div class="payroll-rule-copy">
@@ -2188,7 +2218,7 @@ export async function initializeUI(settings) {
                 </div>
             `;
 
-            item.querySelector(".fixed-edit-button").addEventListener("click", () => {
+            item.querySelector(".fixed-edit-button").addEventListener("click", async () => {
                 fixedMovementEditingId.value = rule.id;
                 fixedMovementType.value = rule.type || "expense";
                 fixedMovementDescription.value = rule.description || "";
@@ -2197,6 +2227,11 @@ export async function initializeUI(settings) {
                 fixedMovementFrequency.value = rule.recurrence?.type || "monthly";
                 fixedMovementStartDate.value = rule.scheduledDate || "";
                 fixedMovementPaymentMethod.value = rule.paymentMethod || "debit";
+                await refreshFixedMovementCreditOptions(rule.creditId || "");
+                if (fixedMovementLabelColor) fixedMovementLabelColor.value = rule.labelColor || "blue";
+                if (fixedMovementLabelShape) fixedMovementLabelShape.value = rule.labelShape || "circle";
+                if (fixedMovementLabelStyle) fixedMovementLabelStyle.value = rule.labelStyle || "solid";
+                syncFixedMovementCreditFields();
                 cancelFixedMovementEditButton.classList.remove("hidden");
                 fixedMovementDescription.focus();
             });
@@ -2253,6 +2288,10 @@ export async function initializeUI(settings) {
 
             const existingId = fixedMovementEditingId.value;
             const type = fixedMovementType.value;
+            const paymentMethod = fixedMovementPaymentMethod.value;
+            const selectedCreditId = type === "expense" && paymentMethod === "credit" ? (fixedMovementCreditId?.value || "") : "";
+            if (paymentMethod === "credit" && type !== "expense") { alert("La tarjeta de crédito sólo puede usarse para egresos."); return; }
+            if (paymentMethod === "credit" && !selectedCreditId) { alert("Selecciona la tarjeta o crédito para este movimiento."); return; }
             const category = fixedMovementCategory?.value || "";
             const categoryColors = {
                 "Alimentación": "yellow",
@@ -2275,8 +2314,8 @@ export async function initializeUI(settings) {
                 purpose: "regular",
                 description,
                 amount,
-                paymentMethod: fixedMovementPaymentMethod.value,
-                creditId: null,
+                paymentMethod,
+                creditId: selectedCreditId || null,
                 status: "scheduled",
                 scheduledDate: startDate,
                 completedDate: null,
@@ -2284,7 +2323,9 @@ export async function initializeUI(settings) {
                     type: fixedMovementFrequency.value
                 },
                 category,
-                labelColor: categoryColors[category] || (type === "income" ? "green" : "red"),
+                labelColor: fixedMovementLabelColor?.value || categoryColors[category] || (type === "income" ? "green" : "red"),
+                labelShape: fixedMovementLabelShape?.value || "circle",
+                labelStyle: fixedMovementLabelStyle?.value || "solid",
                 notes: "Movimiento fijo configurado desde Configuración",
                 createdAt: new Date().toISOString()
             };
@@ -2372,6 +2413,8 @@ export async function initializeUI(settings) {
                 },
                 category: "Nómina",
                 labelColor: "green",
+                labelShape: "diamond",
+                labelStyle: "solid",
                 notes: "Nómina configurada desde Configuración",
                 createdAt: new Date().toISOString()
             };

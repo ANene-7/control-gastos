@@ -1,4 +1,6 @@
 import { getAllRecords } from "./database.js";
+import { calculatePeriodForDate } from "./creditPeriods.js";
+import { getScheduledMovementsForDate } from "./scheduledCalculations.js";
 import {
     calculateObligationRemaining,
     buildPlanInstallmentSchedule,
@@ -42,12 +44,9 @@ function getOpenPeriodProjectedAmount(period, operations) {
 
 export async function getCreditProjectionMovements() {
     try {
-        const [credits, operations, obligations, plans, periods] = await Promise.all([
-            getAllRecords("credits"),
-            getAllRecords("creditOperations"),
-            getAllRecords("creditObligations"),
-            getAllRecords("creditPlans"),
-            getAllRecords("creditPeriods")
+        const [credits, operations, obligations, plans, periods, movements] = await Promise.all([
+            getAllRecords("credits"), getAllRecords("creditOperations"), getAllRecords("creditObligations"),
+            getAllRecords("creditPlans"), getAllRecords("creditPeriods"), getAllRecords("movements")
         ]);
 
         const names = new Map(credits.map(c => [String(c.id), c.name]));
@@ -109,6 +108,32 @@ export async function getCreditProjectionMovements() {
                 sourceType: "open_period",
                 sourceId: period.id
             }));
+        }
+
+        // Compras recurrentes programadas con TDC: proyectar cada ocurrencia hacia la FLP de su periodo.
+        const cardsById = new Map(credits.filter(c => c.active !== false && c.type === "credit_card").map(c => [String(c.id), c]));
+        const hasRecurringCardRules = movements.some(m => m.status === "scheduled" && m.recurrence && m.type === "expense" && m.paymentMethod === "credit" && cardsById.has(String(m.creditId)));
+        if (hasRecurringCardRules) {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+            const end = new Date(today.getFullYear(), today.getMonth() + 19, 0);
+            const byDue = new Map();
+            for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+                const date = `${cursor.getFullYear()}-${String(cursor.getMonth()+1).padStart(2,"0")}-${String(cursor.getDate()).padStart(2,"0")}`;
+                const occurrences = getScheduledMovementsForDate(date, movements).filter(m => m.type === "expense" && m.paymentMethod === "credit" && cardsById.has(String(m.creditId)));
+                for (const movement of occurrences) {
+                    const credit = cardsById.get(String(movement.creditId));
+                    const period = calculatePeriodForDate(credit, date);
+                    if (!period?.dueDate) continue;
+                    const key = `${credit.id}|${period.dueDate}`;
+                    const item = byDue.get(key) || { credit, dueDate: period.dueDate, amount: 0, count: 0 };
+                    item.amount += Number(movement.amount) || 0; item.count += 1; byDue.set(key, item);
+                }
+            }
+            for (const item of byDue.values()) {
+                if (item.amount <= .005) continue;
+                projections.push(makeProjection({ id:`scheduled-${item.credit.id}-${item.dueDate}`, creditId:item.credit.id, creditName:item.credit.name, amount:Math.round(item.amount*100)/100, date:item.dueDate, sourceType:"scheduled_card_charges", sourceId:`scheduled-${item.credit.id}-${item.dueDate}`, meta:{occurrenceCount:item.count} }));
+            }
         }
 
         return projections.sort((a, b) =>
