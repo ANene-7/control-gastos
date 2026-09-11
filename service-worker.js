@@ -1,4 +1,4 @@
-const CACHE_NAME = "cauce-v51";
+const CACHE_NAME = "cauce-v54";
 
 
 const APP_FILES = [
@@ -28,6 +28,7 @@ const APP_FILES = [
     "./js/creditPeriods.js",
     "./js/creditModelCalculations.js",
     "./js/ui.js",
+    "./js/driveSync.js",
     "./js/calendar.js",
     "./js/calculations.js",
     "./js/creditCalculations.js",

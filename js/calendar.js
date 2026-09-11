@@ -922,62 +922,269 @@ const creditObligations =
                 ".calendar-programmed-list"
             );
 
-        scheduledExpensesForDay.forEach(
-            movement => {
+        /*
+            Agrupar pagos/proyecciones de un mismo crédito en una sola
+            etiqueta por día. Los componentes siguen existiendo por separado
+            en el motor financiero; aquí sólo compactamos la representación.
+        */
+        const groupedCreditPayments =
+            new Map();
 
-                if (movement.purpose === "creditPaymentProjection") {
-                    const item = document.createElement("div");
+        scheduledExpensesForDay
+            .filter(
+                movement =>
+                    movement.purpose ===
+                        "creditPaymentProjection"
+                    &&
+                    movement.creditId
+            )
+            .forEach(
+                movement => {
+
+                    const key =
+                        String(
+                            movement.creditId
+                        );
+
+                    const current =
+                        groupedCreditPayments.get(
+                            key
+                        )
+                        ||
+                        {
+                            creditId:
+                                movement.creditId,
+
+                            amount:
+                                0,
+
+                            date:
+                                movement.scheduledDate ||
+                                date,
+
+                            components:
+                                []
+                        };
+
+
+                    current.amount +=
+                        Number(
+                            movement.amount
+                        )
+                        ||
+                        0;
+
+
+                    current.components
+                        .push(
+                            movement
+                        );
+
+
+                    groupedCreditPayments
+                        .set(
+                            key,
+                            current
+                        );
+
+                }
+            );
+
+
+        groupedCreditPayments
+            .forEach(
+                group => {
+
+                    const item =
+                        document.createElement(
+                            "div"
+                        );
+
+
                     item.classList.add(
                         "calendar-programmed-item",
-                        "credit-obligation-calendar-item"
+                        "credit-obligation-calendar-item",
+                        "scheduled-movement-clickable"
                     );
 
-                    const label = document.createElement("span");
-                    label.classList.add("credit-obligation-name");
-                    label.textContent = movement.description || "Pago de crédito";
 
-                    const amount = document.createElement("span");
-                    amount.classList.add("credit-obligation-amount");
-                    amount.textContent = `: ${formatCurrency(Number(movement.amount) || 0)}`;
+                    const relatedCredit =
+                        credits.find(
+                            credit =>
+                                String(
+                                    credit.id
+                                )
+                                ===
+                                String(
+                                    group.creditId
+                                )
+                        );
 
-                    item.append(label, amount);
-                    item.classList.add("scheduled-movement-clickable");
-                    item.addEventListener("click", event => {
-                        event.stopPropagation();
-                        const payload = {
-                            creditId: movement.creditId,
-                            amount: Number(movement.amount) || 0,
-                            date: movement.scheduledDate || date,
-                            obligationId: movement.projectionSourceType === "obligation" ? movement.projectionSourceId : null,
-                            planId: movement.projectionSourceType === "plan" ? movement.projectionSourceId : null
-                        };
-                        if (typeof window.cauceOpenCreditPayment === "function") {
-                            window.cauceOpenCreditPayment(payload);
-                        } else {
-                            window.dispatchEvent(new CustomEvent("openCreditPaymentById", {
-                                detail: payload
-                            }));
+
+                    const label =
+                        document.createElement(
+                            "span"
+                        );
+
+
+                    label.classList.add(
+                        "credit-obligation-name"
+                    );
+
+
+                    label.textContent =
+                        relatedCredit?.name
+                        ||
+                        group.components[0]
+                            ?.creditName
+                        ||
+                        String(
+                            group.components[0]
+                                ?.description
+                                ||
+                                "Pago de crédito"
+                        )
+                            .replace(
+                                /^Pago de\s+/i,
+                                ""
+                            );
+
+
+                    const amount =
+                        document.createElement(
+                            "span"
+                        );
+
+
+                    amount.classList.add(
+                        "credit-obligation-amount"
+                    );
+
+
+                    amount.textContent =
+                        `: ${formatCurrency(
+                            group.amount
+                        )}`;
+
+
+                    item.append(
+                        label,
+                        amount
+                    );
+
+
+                    if (
+                        group.components.length >
+                        1
+                    ) {
+
+                        item.title =
+                            `${group.components.length} pagos previstos agrupados`;
+
+                    }
+
+
+                    item.addEventListener(
+                        "click",
+                        event => {
+
+                            event.stopPropagation();
+
+
+                            /*
+                                Al abrir el grupo no forzamos una obligación
+                                o plan específico. El motor de pagos distribuirá
+                                el abono total entre los componentes pendientes.
+                            */
+                            const payload = {
+
+                                creditId:
+                                    group.creditId,
+
+                                amount:
+                                    group.amount,
+
+                                date:
+                                    group.date,
+
+                                obligationId:
+                                    null,
+
+                                planId:
+                                    null
+
+                            };
+
+
+                            if (
+                                typeof window
+                                    .cauceOpenCreditPayment
+                                ===
+                                "function"
+                            ) {
+
+                                window
+                                    .cauceOpenCreditPayment(
+                                        payload
+                                    );
+
+                            } else {
+
+                                window
+                                    .dispatchEvent(
+                                        new CustomEvent(
+                                            "openCreditPaymentById",
+                                            {
+                                                detail:
+                                                    payload
+                                            }
+                                        )
+                                    );
+
+                            }
+
                         }
-                    });
-                    scheduledExpensesList.appendChild(item);
-                    return;
+                    );
+
+
+                    scheduledExpensesList
+                        .appendChild(
+                            item
+                        );
+
                 }
+            );
 
-                const dot =
-                    createMovementColorDot(
-                        movement
-                    );
 
-                dot.title =
-                    movement.description;
+        /*
+            El resto de egresos programados conserva su símbolo individual.
+        */
+        scheduledExpensesForDay
+            .filter(
+                movement =>
+                    movement.purpose !==
+                        "creditPaymentProjection"
+            )
+            .forEach(
+                movement => {
 
-                scheduledExpensesList
-                    .appendChild(
-                        dot
-                    );
+                    const dot =
+                        createMovementColorDot(
+                            movement
+                        );
 
-            }
-        );
+
+                    dot.title =
+                        movement.description;
+
+
+                    scheduledExpensesList
+                        .appendChild(
+                            dot
+                        );
+
+                }
+            );
 
         if (
             scheduledExpensesForDay.length === 0

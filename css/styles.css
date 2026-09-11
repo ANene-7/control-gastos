@@ -6825,3 +6825,55 @@ html[data-theme="dark"] .movement-marker-preview-card {
 ) {
     --marker-color: #9ca3af;
 }
+
+
+/* V3.0.2a · resumen previo de importación */
+#confirmModalMessage {
+    white-space: pre-line;
+}
+
+
+/* V3.0.2b · sincronización manual con Google Drive */
+.drive-sync-setup-card {
+    display: grid;
+    gap: 14px;
+    padding: 16px;
+    border: 1px solid var(--border-color, #d9dee7);
+    border-radius: 14px;
+    background: var(--surface-color, #ffffff);
+}
+
+.drive-origin-row {
+    display: grid;
+    gap: 6px;
+    font-size: 0.88rem;
+}
+
+.drive-origin-row code {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    padding: 9px 11px;
+    border-radius: 9px;
+    background: rgba(100, 116, 139, 0.10);
+}
+
+.drive-sync-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.drive-local-heading {
+    margin-top: 16px;
+}
+
+[data-theme="dark"] .drive-sync-setup-card {
+    border-color: rgba(148, 163, 184, 0.24);
+    background: rgba(15, 23, 42, 0.62);
+}
+
+[data-theme="dark"] .drive-origin-row code {
+    background: rgba(148, 163, 184, 0.10);
+}

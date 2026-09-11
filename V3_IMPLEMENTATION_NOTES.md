@@ -73,3 +73,30 @@ Hotfix de estabilidad sobre V3.0.0s.
 - Corrige la cascada CSS de la vista previa del símbolo.
 - El color seleccionado ahora se refleja inmediatamente junto con forma y estilo.
 - Cache v51.
+
+## V3.0.1g
+- El calendario agrupa en una sola etiqueta los pagos/proyecciones del mismo crédito que vencen el mismo día.
+- La etiqueta muestra el total combinado (p. ej. plan $500 + cargos del periodo $200 = BBVA $700).
+- Los componentes financieros siguen separados internamente; sólo se compacta la vista.
+- Al abrir la etiqueta agrupada, "Registrar abono" se precarga con el total y el motor distribuye el pago entre obligaciones/plan.
+- Cache v52.
+
+## V3.0.2a
+- Exportar respaldo usa Web Share API con archivos cuando el navegador lo permite.
+- En móvil puede compartirse directamente a Drive, mensajería o Archivos sin descargar/buscar manualmente.
+- Si compartir archivos no está disponible, se conserva la descarga JSON tradicional.
+- Importar respaldo muestra primero fecha de exportación y conteos de movimientos, créditos, operaciones, obligaciones y planes.
+- No requiere servidor, cuenta ni servicio de pago.
+- Cache v53.
+
+## V3.0.2b
+- Primera sincronización manual con Google Drive, sin servidor propio.
+- OAuth 2.0 en navegador mediante Google Identity Services.
+- Scope mínimo `https://www.googleapis.com/auth/drive.appdata`.
+- El respaldo remoto se guarda como `cauce-sync.json` dentro de `appDataFolder`.
+- Subir: crea o reemplaza el respaldo remoto después de mostrar la fecha existente.
+- Descargar: valida el respaldo, muestra resumen y pide doble confirmación antes de reemplazar IndexedDB.
+- Client ID configurable desde Cauce y guardado sólo en localStorage del dispositivo.
+- Muestra el origen exacto que debe añadirse a "Authorized JavaScript origins".
+- El token OAuth permanece sólo en memoria y se pierde al cerrar/recargar la app.
+- Cache v54.

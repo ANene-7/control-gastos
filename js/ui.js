@@ -58,6 +58,15 @@ import {
 } from "./creditPaymentFlow.js";
 
 import {
+    requestDriveAccess,
+    clearDriveAccess,
+    uploadDriveBackup,
+    downloadDriveBackup,
+    findDriveSyncFile,
+    hasDriveAccessToken
+} from "./driveSync.js";
+
+import {
     getNotificationCapability,
     getNotificationPreferences,
     saveNotificationPreferences,
@@ -529,6 +538,47 @@ export async function initializeUI(settings) {
         );
 
 
+    const googleDriveClientId =
+        document.getElementById(
+            "googleDriveClientId"
+        );
+
+    const googleDriveOrigin =
+        document.getElementById(
+            "googleDriveOrigin"
+        );
+
+    const connectGoogleDriveButton =
+        document.getElementById(
+            "connectGoogleDriveButton"
+        );
+
+    const disconnectGoogleDriveButton =
+        document.getElementById(
+            "disconnectGoogleDriveButton"
+        );
+
+    const uploadGoogleDriveButton =
+        document.getElementById(
+            "uploadGoogleDriveButton"
+        );
+
+    const downloadGoogleDriveButton =
+        document.getElementById(
+            "downloadGoogleDriveButton"
+        );
+
+    const googleDriveStatus =
+        document.getElementById(
+            "googleDriveStatus"
+        );
+
+    const googleDriveLastBackup =
+        document.getElementById(
+            "googleDriveLastBackup"
+        );
+
+
     const notificationStatusBadge =
         document.getElementById(
             "notificationStatusBadge"
@@ -751,6 +801,641 @@ export async function initializeUI(settings) {
         }
 
     }
+
+
+    /*
+        =================================
+        SINCRONIZACIÓN MANUAL CON DRIVE
+        =================================
+    */
+
+    const GOOGLE_DRIVE_CLIENT_ID_KEY =
+        "cauce-google-drive-client-id";
+
+    function setDriveControlsBusy(isBusy) {
+
+        [
+            connectGoogleDriveButton,
+            disconnectGoogleDriveButton,
+            uploadGoogleDriveButton,
+            downloadGoogleDriveButton
+        ]
+            .filter(Boolean)
+            .forEach(
+                button => {
+                    button.disabled =
+                        Boolean(isBusy);
+                }
+            );
+
+    }
+
+
+    function renderDriveConnectionState() {
+
+        const connected =
+            hasDriveAccessToken();
+
+        googleDriveStatus?.classList.toggle(
+            "is-ready",
+            connected
+        );
+
+        googleDriveStatus?.classList.toggle(
+            "is-warning",
+            !connected
+        );
+
+        if (googleDriveStatus) {
+            googleDriveStatus.textContent =
+                connected
+                    ? "Autorizado"
+                    : "Sin autorizar";
+        }
+
+        disconnectGoogleDriveButton?.classList.toggle(
+            "hidden",
+            !connected
+        );
+
+    }
+
+
+    async function refreshDriveBackupStatus() {
+
+        if (
+            !googleDriveLastBackup ||
+            !hasDriveAccessToken()
+        ) {
+
+            if (googleDriveLastBackup) {
+                googleDriveLastBackup.textContent =
+                    "No consultado";
+            }
+
+            return;
+        }
+
+        try {
+
+            const file =
+                await findDriveSyncFile();
+
+            if (!file) {
+
+                googleDriveLastBackup.textContent =
+                    "Todavía no existe";
+
+                return;
+            }
+
+            const modified =
+                new Date(
+                    file.modifiedTime
+                );
+
+            googleDriveLastBackup.textContent =
+                Number.isNaN(
+                    modified.getTime()
+                )
+                    ? "Disponible en Drive"
+                    : modified.toLocaleString(
+                        "es-MX",
+                        {
+                            dateStyle:
+                                "medium",
+                            timeStyle:
+                                "short"
+                        }
+                    );
+
+        } catch (error) {
+
+            console.warn(
+                "No se pudo consultar el respaldo en Drive:",
+                error
+            );
+
+            googleDriveLastBackup.textContent =
+                "No se pudo consultar";
+
+        }
+
+    }
+
+
+    async function buildCurrentBackup() {
+
+        const data =
+            {};
+
+        for (
+            const storeName of
+            BACKUP_STORES
+        ) {
+
+            data[storeName] =
+                await getAllRecords(
+                    storeName
+                );
+
+        }
+
+        return {
+            app:
+                "Cauce",
+
+            version:
+                3,
+
+            exportedAt:
+                new Date()
+                    .toISOString(),
+
+            data
+        };
+
+    }
+
+
+    function validateCompatibleBackup(
+        backup
+    ) {
+
+        const isCurrentCauceBackup =
+            backup?.app === "Cauce" &&
+            backup?.version === 3;
+
+        const isLegacyBackup =
+            backup?.app === "Control de Gastos" &&
+            [1, 2].includes(
+                backup?.version
+            );
+
+        if (
+            !isCurrentCauceBackup &&
+            !isLegacyBackup
+        ) {
+
+            throw new Error(
+                "El archivo de Drive no corresponde a un respaldo compatible con Cauce."
+            );
+
+        }
+
+        if (
+            !backup.data ||
+            !Array.isArray(
+                backup.data.settings
+            ) ||
+            !Array.isArray(
+                backup.data.movements
+            ) ||
+            !Array.isArray(
+                backup.data.credits
+            )
+        ) {
+
+            throw new Error(
+                "El respaldo de Drive está incompleto o dañado."
+            );
+
+        }
+
+    }
+
+
+    function normalizeBackupData(
+        backup
+    ) {
+
+        return {
+            settings:
+                backup.data.settings,
+
+            movements:
+                backup.data.movements,
+
+            credits:
+                backup.data.credits,
+
+            recurringRules:
+                Array.isArray(
+                    backup.data.recurringRules
+                )
+                    ? backup.data.recurringRules
+                    : [],
+
+            creditOperations:
+                Array.isArray(
+                    backup.data.creditOperations
+                )
+                    ? backup.data.creditOperations
+                    : [],
+
+            creditPeriods:
+                Array.isArray(
+                    backup.data.creditPeriods
+                )
+                    ? backup.data.creditPeriods
+                    : [],
+
+            creditObligations:
+                Array.isArray(
+                    backup.data.creditObligations
+                )
+                    ? backup.data.creditObligations
+                    : [],
+
+            creditPlans:
+                Array.isArray(
+                    backup.data.creditPlans
+                )
+                    ? backup.data.creditPlans
+                    : [],
+
+            creditAdjustments:
+                Array.isArray(
+                    backup.data.creditAdjustments
+                )
+                    ? backup.data.creditAdjustments
+                    : []
+        };
+
+    }
+
+
+    async function ensureDriveAuthorized({
+        forceConsent = false
+    } = {}) {
+
+        const clientId =
+            googleDriveClientId?.value
+                ?.trim();
+
+        if (!clientId) {
+
+            showNotification(
+                "Pega primero tu Client ID de Google OAuth.",
+                "error"
+            );
+
+            googleDriveClientId?.focus();
+
+            return false;
+        }
+
+        localStorage.setItem(
+            GOOGLE_DRIVE_CLIENT_ID_KEY,
+            clientId
+        );
+
+        if (
+            hasDriveAccessToken() &&
+            !forceConsent
+        ) {
+            return true;
+        }
+
+        await requestDriveAccess(
+            clientId,
+            {
+                forceConsent
+            }
+        );
+
+        renderDriveConnectionState();
+
+        return true;
+
+    }
+
+
+    connectGoogleDriveButton?.addEventListener(
+        "click",
+        async () => {
+
+            setDriveControlsBusy(
+                true
+            );
+
+            try {
+
+                const connected =
+                    await ensureDriveAuthorized({
+                        forceConsent:
+                            true
+                    });
+
+                if (!connected) {
+                    return;
+                }
+
+                showNotification(
+                    "Google Drive autorizado para Cauce."
+                );
+
+                await refreshDriveBackupStatus();
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo autorizar Google Drive:",
+                    error
+                );
+
+                showNotification(
+                    error.message ||
+                    "No se pudo autorizar Google Drive.",
+                    "error"
+                );
+
+            } finally {
+
+                setDriveControlsBusy(
+                    false
+                );
+
+                renderDriveConnectionState();
+
+            }
+
+        }
+    );
+
+
+    disconnectGoogleDriveButton?.addEventListener(
+        "click",
+        () => {
+
+            clearDriveAccess();
+
+            renderDriveConnectionState();
+
+            if (googleDriveLastBackup) {
+                googleDriveLastBackup.textContent =
+                    "No consultado";
+            }
+
+            showNotification(
+                "La autorización de Drive se cerró en este dispositivo."
+            );
+
+        }
+    );
+
+
+    uploadGoogleDriveButton?.addEventListener(
+        "click",
+        async () => {
+
+            setDriveControlsBusy(
+                true
+            );
+
+            try {
+
+                const connected =
+                    await ensureDriveAuthorized();
+
+                if (!connected) {
+                    return;
+                }
+
+                const backup =
+                    await buildCurrentBackup();
+
+                const existing =
+                    await findDriveSyncFile();
+
+                if (existing) {
+
+                    const confirmed =
+                        await showConfirmDialog({
+                            title:
+                                "Actualizar respaldo en Drive",
+
+                            message:
+                                `Drive ya contiene un respaldo de Cauce modificado el ${formatBackupDate(existing.modifiedTime)}.\n\nSe reemplazará por el estado actual de este dispositivo (${formatBackupDate(backup.exportedAt)}).`,
+
+                            confirmText:
+                                "Subir este dispositivo",
+
+                            cancelText:
+                                "Cancelar"
+                        });
+
+                    if (!confirmed) {
+                        return;
+                    }
+
+                }
+
+                const uploaded =
+                    await uploadDriveBackup(
+                        backup
+                    );
+
+                showNotification(
+                    "Datos actuales guardados en Google Drive."
+                );
+
+                if (
+                    googleDriveLastBackup &&
+                    uploaded?.modifiedTime
+                ) {
+                    googleDriveLastBackup.textContent =
+                        formatBackupDate(
+                            uploaded.modifiedTime
+                        );
+                } else {
+                    await refreshDriveBackupStatus();
+                }
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo subir el respaldo a Drive:",
+                    error
+                );
+
+                showNotification(
+                    error.message ||
+                    "No se pudo guardar el respaldo en Google Drive.",
+                    "error"
+                );
+
+                renderDriveConnectionState();
+
+            } finally {
+
+                setDriveControlsBusy(
+                    false
+                );
+
+            }
+
+        }
+    );
+
+
+    downloadGoogleDriveButton?.addEventListener(
+        "click",
+        async () => {
+
+            setDriveControlsBusy(
+                true
+            );
+
+            try {
+
+                const connected =
+                    await ensureDriveAuthorized();
+
+                if (!connected) {
+                    return;
+                }
+
+                const {
+                    file,
+                    backup
+                } =
+                    await downloadDriveBackup();
+
+                validateCompatibleBackup(
+                    backup
+                );
+
+                const confirmed =
+                    await showConfirmDialog({
+                        title:
+                            "Restaurar desde Google Drive",
+
+                        message:
+                            `Respaldo encontrado en Drive:\n\n${getBackupSummary(backup)}\n\nÚltima modificación en Drive: ${formatBackupDate(file.modifiedTime)}\n\nLos datos actuales de este dispositivo serán reemplazados.`,
+
+                        confirmText:
+                            "Continuar",
+
+                        cancelText:
+                            "Cancelar"
+                    });
+
+                if (!confirmed) {
+                    return;
+                }
+
+                const finalConfirmation =
+                    await showConfirmDialog({
+                        title:
+                            "Confirmar descarga desde Drive",
+
+                        message:
+                            "Esta acción reemplazará la información local. Si este dispositivo contiene cambios que aún no subiste a Drive, se perderán.",
+
+                        confirmText:
+                            "Usar datos de Drive",
+
+                        cancelText:
+                            "Volver"
+                    });
+
+                if (!finalConfirmation) {
+                    return;
+                }
+
+                const normalizedData =
+                    normalizeBackupData(
+                        backup
+                    );
+
+                for (
+                    const storeName of
+                    BACKUP_STORES
+                ) {
+
+                    await replaceStoreRecords(
+                        storeName,
+                        normalizedData[
+                            storeName
+                        ]
+                    );
+
+                }
+
+                showNotification(
+                    "Datos restaurados desde Google Drive."
+                );
+
+                setTimeout(
+                    () => {
+                        window.location.reload();
+                    },
+                    700
+                );
+
+            } catch (error) {
+
+                console.error(
+                    "No se pudo restaurar desde Drive:",
+                    error
+                );
+
+                showNotification(
+                    error.message ||
+                    "No se pudo restaurar desde Google Drive.",
+                    "error"
+                );
+
+                renderDriveConnectionState();
+
+            } finally {
+
+                setDriveControlsBusy(
+                    false
+                );
+
+            }
+
+        }
+    );
+
+
+    if (googleDriveClientId) {
+
+        googleDriveClientId.value =
+            localStorage.getItem(
+                GOOGLE_DRIVE_CLIENT_ID_KEY
+            )
+            ||
+            "";
+
+        googleDriveClientId.addEventListener(
+            "change",
+            () => {
+
+                localStorage.setItem(
+                    GOOGLE_DRIVE_CLIENT_ID_KEY,
+                    googleDriveClientId.value
+                        .trim()
+                );
+
+                clearDriveAccess();
+                renderDriveConnectionState();
+
+            }
+        );
+
+    }
+
+
+    if (googleDriveOrigin) {
+        googleDriveOrigin.textContent =
+            window.location.origin;
+    }
+
+
+    renderDriveConnectionState();
 
 
     /*
@@ -1024,6 +1709,58 @@ export async function initializeUI(settings) {
     ];
 
 
+    function formatBackupDate(value) {
+        if (!value) return "Fecha desconocida";
+
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return String(value);
+
+        return new Intl.DateTimeFormat(
+            "es-MX",
+            {
+                dateStyle: "medium",
+                timeStyle: "short"
+            }
+        ).format(date);
+    }
+
+    function getBackupSummary(backup) {
+        const data = backup?.data || {};
+
+        const count = storeName =>
+            Array.isArray(data[storeName])
+                ? data[storeName].length
+                : 0;
+
+        const lines = [
+            `Exportado: ${formatBackupDate(backup?.exportedAt)}`,
+            `Movimientos: ${count("movements")}`,
+            `Créditos: ${count("credits")}`,
+            `Operaciones de crédito: ${count("creditOperations")}`,
+            `Obligaciones: ${count("creditObligations")}`,
+            `Planes: ${count("creditPlans")}`
+        ];
+
+        return lines.join("\\n");
+    }
+
+    function downloadBackupBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+
+        link.href = url;
+        link.download = filename;
+
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        setTimeout(
+            () => URL.revokeObjectURL(url),
+            1000
+        );
+    }
+
     exportBackupButton.addEventListener(
         "click",
         async () => {
@@ -1077,46 +1814,79 @@ export async function initializeUI(settings) {
                     );
 
 
-                const url =
-                    URL.createObjectURL(
-                        blob
-                    );
-
-
-                const link =
-                    document.createElement(
-                        "a"
-                    );
-
-
                 const date =
                     getLocalDateString();
 
-
-                link.href =
-                    url;
-
-
-                link.download =
+                const filename =
                     `cauce-respaldo-${date}.json`;
 
+                const file =
+                    new File(
+                        [blob],
+                        filename,
+                        {
+                            type:
+                                "application/json"
+                        }
+                    );
 
-                document.body.appendChild(
-                    link
-                );
+                let shared =
+                    false;
+
+                try {
+
+                    if (
+                        navigator.share &&
+                        navigator.canShare &&
+                        navigator.canShare({
+                            files: [file]
+                        })
+                    ) {
+
+                        await navigator.share({
+                            files: [file],
+                            title: "Respaldo de Cauce",
+                            text: "Respaldo completo de Cauce"
+                        });
+
+                        shared =
+                            true;
+
+                    }
+
+                } catch (shareError) {
+
+                    if (
+                        shareError?.name ===
+                            "AbortError"
+                    ) {
+
+                        return;
+
+                    }
+
+                    console.warn(
+                        "No se pudo abrir el menú de compartir; se descargará el respaldo.",
+                        shareError
+                    );
+
+                }
 
 
-                link.click();
-                link.remove();
+                if (!shared) {
 
+                    downloadBackupBlob(
+                        blob,
+                        filename
+                    );
 
-                URL.revokeObjectURL(
-                    url
-                );
+                }
 
 
                 showNotification(
-                    "Respaldo completo exportado correctamente."
+                    shared
+                        ? "Respaldo listo para compartir."
+                        : "Respaldo descargado correctamente."
                 );
 
 
@@ -1294,7 +2064,7 @@ export async function initializeUI(settings) {
                             "Importar respaldo",
 
                         message:
-                            "Los datos actuales serán reemplazados por los del respaldo seleccionado. Antes de continuar, asegúrate de haber exportado una copia si necesitas conservar el estado actual.",
+                            `Se encontró un respaldo compatible:\n\n${getBackupSummary(backup)}\n\nLos datos actuales serán reemplazados por los del respaldo seleccionado. Antes de continuar, asegúrate de haber exportado una copia si necesitas conservar el estado actual.`,
 
                         confirmText:
                             "Continuar",

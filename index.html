@@ -1153,48 +1153,114 @@
             <details class="settings-collapsible">
                 <summary>
                     <span>Sincronización entre dispositivos</span>
-                    <small>Base local para sincronización futura</small>
+                    <small>Sincronización manual con Google Drive</small>
                 </summary>
+
                 <div class="settings-collapsible-content">
 
-            <div class="settings-section-heading">
-                <div>
-                    <h3>Sincronización entre dispositivos</h3>
-                    <p>Esta versión prepara la base local para sincronizar tus datos en una etapa posterior. Por ahora no se envía información a ningún servidor ni se requiere una cuenta.</p>
-                </div>
+                    <div class="settings-section-heading">
+                        <div>
+                            <h3>Google Drive</h3>
+                            <p>Guarda un único respaldo privado de Cauce en tu Google Drive y úsalo para pasar el estado completo de la app entre dispositivos.</p>
+                        </div>
 
-                <span
-                    id="syncStatusBadge"
-                    class="sync-status-badge">
-                    Preparando…
-                </span>
-            </div>
+                        <span
+                            id="googleDriveStatus"
+                            class="sync-status-badge is-warning">
+                            Sin autorizar
+                        </span>
+                    </div>
 
-            <div class="sync-foundation-grid">
+                    <div class="drive-sync-setup-card">
+                        <label class="form-field">
+                            <span>Client ID de Google OAuth</span>
+                            <input
+                                type="text"
+                                id="googleDriveClientId"
+                                autocomplete="off"
+                                spellcheck="false"
+                                placeholder="000000000000-xxxx.apps.googleusercontent.com">
+                            <small>Se guarda sólo en este dispositivo. El Client ID identifica tu aplicación de Google; no es una contraseña ni un Client Secret.</small>
+                        </label>
 
-                <div class="sync-foundation-card">
-                    <span class="sync-foundation-label">Modo actual</span>
-                    <strong>Almacenamiento local</strong>
-                    <small>IndexedDB sigue siendo la fuente principal de datos en este dispositivo.</small>
-                </div>
+                        <div class="drive-origin-row">
+                            <span>Origen que debes autorizar en Google Cloud:</span>
+                            <code id="googleDriveOrigin">—</code>
+                        </div>
 
-                <div class="sync-foundation-card">
-                    <span class="sync-foundation-label">Cambios locales registrados</span>
-                    <strong id="syncPendingCount">0</strong>
-                    <small>La app conserva una cola técnica de cambios preparada para una futura sincronización.</small>
-                </div>
+                        <div class="form-actions data-actions">
+                            <button
+                                type="button"
+                                id="connectGoogleDriveButton"
+                                class="secondary-button">
+                                Autorizar Google Drive
+                            </button>
 
-                <div class="sync-foundation-card">
-                    <span class="sync-foundation-label">Último cambio local</span>
-                    <strong id="syncLastChange">—</strong>
-                    <small>Este dato sirve como referencia para resolver sincronizaciones posteriormente.</small>
-                </div>
+                            <button
+                                type="button"
+                                id="disconnectGoogleDriveButton"
+                                class="secondary-button hidden">
+                                Cerrar autorización
+                            </button>
+                        </div>
+                    </div>
 
-            </div>
+                    <div class="sync-foundation-grid">
+                        <div class="sync-foundation-card">
+                            <span class="sync-foundation-label">Último respaldo en Drive</span>
+                            <strong id="googleDriveLastBackup">No consultado</strong>
+                            <small>Cauce usa un archivo privado llamado cauce-sync.json.</small>
+                        </div>
 
-            <div class="sync-foundation-note">
-                <strong>Importante:</strong> esta etapa no activa sincronización en la nube. Tus datos continúan guardándose únicamente en este dispositivo.
-            </div>
+                        <div class="sync-foundation-card">
+                            <span class="sync-foundation-label">Cambios locales registrados</span>
+                            <strong id="syncPendingCount">0</strong>
+                            <small>La cola local seguirá sirviendo como base para la sincronización automática futura.</small>
+                        </div>
+
+                        <div class="sync-foundation-card">
+                            <span class="sync-foundation-label">Último cambio local</span>
+                            <strong id="syncLastChange">—</strong>
+                            <small>Sirve para comparar el estado de cada dispositivo.</small>
+                        </div>
+                    </div>
+
+                    <div class="drive-sync-actions">
+                        <button
+                            type="button"
+                            id="uploadGoogleDriveButton"
+                            class="primary-button">
+                            ↑ Subir este dispositivo a Drive
+                        </button>
+
+                        <button
+                            type="button"
+                            id="downloadGoogleDriveButton"
+                            class="secondary-button">
+                            ↓ Usar datos de Drive en este dispositivo
+                        </button>
+                    </div>
+
+                    <div class="sync-foundation-note">
+                        <strong>Modo manual:</strong> subir reemplaza el respaldo de Drive con el estado actual de este dispositivo. Descargar reemplaza los datos locales con el respaldo de Drive. Cauce muestra fechas y pide confirmación antes de sobrescribir cualquiera de los dos lados.
+                    </div>
+
+                    <div class="sync-foundation-note">
+                        <strong>Privacidad:</strong> el archivo se guarda en el espacio de datos de aplicación de Google Drive. Cauce solicita acceso únicamente a sus propios datos de aplicación, no a tus documentos normales de Drive.
+                    </div>
+
+                    <div class="settings-section-heading drive-local-heading">
+                        <div>
+                            <h3>Base local</h3>
+                            <p>IndexedDB continúa siendo la fuente de datos mientras usas Cauce. Drive sólo interviene cuando pulsas subir o descargar.</p>
+                        </div>
+
+                        <span
+                            id="syncStatusBadge"
+                            class="sync-status-badge">
+                            Preparando…
+                        </span>
+                    </div>
 
                 </div>
             </details>
@@ -1296,14 +1362,14 @@
 
                     <div class="data-settings-block">
                         <h3>Respaldo de datos</h3>
-                        <p>Guarda una copia completa de tu configuración, movimientos, créditos, recurrencias y ajustes de crédito. Es recomendable crear un respaldo antes de importar información o reiniciar la app.</p>
+                        <p>Guarda una copia completa de tu configuración, movimientos, créditos, recurrencias y ajustes de crédito. En dispositivos compatibles puedes compartirla directamente a Drive, mensajería o Archivos; en otros se descargará como JSON.</p>
 
                         <div class="form-actions data-actions">
                             <button
                                 type="button"
                                 id="exportBackupButton"
                                 class="secondary-button">
-                                Exportar respaldo
+                                Exportar / compartir
                             </button>
 
                             <button
