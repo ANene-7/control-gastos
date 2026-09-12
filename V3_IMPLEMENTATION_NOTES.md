@@ -100,3 +100,10 @@ Hotfix de estabilidad sobre V3.0.0s.
 - Muestra el origen exacto que debe añadirse a "Authorized JavaScript origins".
 - El token OAuth permanece sólo en memoria y se pierde al cerrar/recargar la app.
 - Cache v54.
+
+## V3.0.2c
+- Client ID oficial de Cauce integrado: `243120588384-ad60lse1jdfi5v8nkl26mg143v07e1cg.apps.googleusercontent.com`.
+- Ya no se introduce Client ID por dispositivo.
+- Cada dispositivo sigue autorizando su cuenta Google mediante OAuth.
+- Campo técnico eliminado de la interfaz normal.
+- Cache v55.

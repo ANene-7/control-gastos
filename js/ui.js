@@ -809,8 +809,8 @@ export async function initializeUI(settings) {
         =================================
     */
 
-    const GOOGLE_DRIVE_CLIENT_ID_KEY =
-        "cauce-google-drive-client-id";
+    const GOOGLE_DRIVE_CLIENT_ID =
+        "243120588384-ad60lse1jdfi5v8nkl26mg143v07e1cg.apps.googleusercontent.com";
 
     function setDriveControlsBusy(isBusy) {
 
@@ -1070,25 +1070,7 @@ export async function initializeUI(settings) {
     } = {}) {
 
         const clientId =
-            googleDriveClientId?.value
-                ?.trim();
-
-        if (!clientId) {
-
-            showNotification(
-                "Pega primero tu Client ID de Google OAuth.",
-                "error"
-            );
-
-            googleDriveClientId?.focus();
-
-            return false;
-        }
-
-        localStorage.setItem(
-            GOOGLE_DRIVE_CLIENT_ID_KEY,
-            clientId
-        );
+            GOOGLE_DRIVE_CLIENT_ID;
 
         if (
             hasDriveAccessToken() &&
@@ -1399,34 +1381,6 @@ export async function initializeUI(settings) {
 
         }
     );
-
-
-    if (googleDriveClientId) {
-
-        googleDriveClientId.value =
-            localStorage.getItem(
-                GOOGLE_DRIVE_CLIENT_ID_KEY
-            )
-            ||
-            "";
-
-        googleDriveClientId.addEventListener(
-            "change",
-            () => {
-
-                localStorage.setItem(
-                    GOOGLE_DRIVE_CLIENT_ID_KEY,
-                    googleDriveClientId.value
-                        .trim()
-                );
-
-                clearDriveAccess();
-                renderDriveConnectionState();
-
-            }
-        );
-
-    }
 
 
     if (googleDriveOrigin) {

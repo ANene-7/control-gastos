@@ -6877,3 +6877,8 @@ html[data-theme="dark"] .movement-marker-preview-card {
 [data-theme="dark"] .drive-origin-row code {
     background: rgba(148, 163, 184, 0.10);
 }
+
+.drive-sync-ready-note {
+    margin: 0;
+    line-height: 1.5;
+}
