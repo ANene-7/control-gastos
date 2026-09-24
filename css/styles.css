@@ -6882,3 +6882,17 @@ html[data-theme="dark"] .movement-marker-preview-card {
     margin: 0;
     line-height: 1.5;
 }
+
+
+/* V3.0.2e · selector de crédito visible en formulario comprimido */
+@media (max-width: 520px) {
+    #movementModal .form-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+    }
+    #movementModal .form-actions button { width: 100%; }
+    #movementModal #toggleMovementDetailsButton { grid-column: 1 / -1; grid-row: 1; }
+    #movementModal #cancelMovementButton { grid-column: 1; grid-row: 2; }
+    #movementModal .form-actions button[type="submit"] { grid-column: 2; grid-row: 2; }
+}

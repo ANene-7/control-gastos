@@ -107,3 +107,17 @@ Hotfix de estabilidad sobre V3.0.0s.
 - Cada dispositivo sigue autorizando su cuenta Google mediante OAuth.
 - Campo técnico eliminado de la interfaz normal.
 - Cache v55.
+
+## V3.0.2d
+- Nuevo movimiento muestra inicialmente Concepto, Monto y Método.
+- "Agregar detalles" despliega/oculta el resto del formulario.
+- En móvil el modal de Nuevo movimiento se abre automáticamente al iniciar.
+- Al abrir se enfoca Concepto.
+- Al cerrar se vuelven a ocultar los detalles.
+- Cache v56.
+
+## V3.0.2e
+- El selector «Crédito utilizado» quedó fuera del contenedor comprimido de detalles.
+- Al elegir «Crédito» como método, el selector permanece visible en el modal rápido sin necesidad de pulsar «Agregar detalles».
+- Se conserva la lógica existente para ocultarlo al cambiar a débito/efectivo o al cerrar/restablecer el formulario.
+- Cache v57.

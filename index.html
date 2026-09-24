@@ -433,6 +433,55 @@
                 </div>
 
 
+
+
+                <div class="form-group">
+
+                    <label for="paymentMethod">
+                        Método
+                    </label>
+
+                    <select id="paymentMethod" required>
+
+                        <option value="debit">
+                            Débito
+                        </option>
+
+                        <option value="cash">
+                            Efectivo
+                        </option>
+
+                        <option value="credit">
+                            Crédito
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <!-- Visible en el formulario comprimido cuando el método es Crédito -->
+                <div
+                    id="creditSelectorContainer"
+                    class="form-group hidden">
+
+                    <label for="creditSelector">
+                        Crédito utilizado
+                    </label>
+
+                    <select id="creditSelector">
+
+                        <option value="">
+                            Selecciona un crédito
+                        </option>
+
+                    </select>
+
+                </div>
+
+                <div
+                    id="movementDetailsContainer"
+                    class="movement-details hidden">
+
                 <div class="movement-options">
 
                     <label>
@@ -473,49 +522,6 @@
                 </div>
 
 
-                <div class="form-group">
-
-                    <label for="paymentMethod">
-                        Método
-                    </label>
-
-                    <select id="paymentMethod" required>
-
-                        <option value="debit">
-                            Débito
-                        </option>
-
-                        <option value="cash">
-                            Efectivo
-                        </option>
-
-                        <option value="credit">
-                            Crédito
-                        </option>
-
-                    </select>
-
-                </div>
-
-
-                <!-- Se mostrará únicamente cuando se seleccione crédito -->
-                <div
-                    id="creditSelectorContainer"
-                    class="form-group hidden">
-
-                    <label for="creditSelector">
-                        Crédito utilizado
-                    </label>
-
-                    <select id="creditSelector">
-
-                        <option value="">
-                            Selecciona un crédito
-                        </option>
-
-                    </select>
-
-                </div>
 
                 <div
                     id="creditPaymentSelectorContainer"
@@ -769,7 +775,16 @@
                 </div>
 
 
+                </div>
+
                 <div class="form-actions">
+
+                    <button
+                        type="button"
+                        id="toggleMovementDetailsButton"
+                        class="secondary-button">
+                        Agregar detalles
+                    </button>
 
                     <button
                         type="button"

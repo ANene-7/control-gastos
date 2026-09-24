@@ -186,6 +186,17 @@ function initializeMovementForm() {
             "cancelMovementButton"
         );
 
+    const toggleMovementDetailsButton =
+        document.getElementById(
+            "toggleMovementDetailsButton"
+        );
+
+
+    const movementDetailsContainer =
+        document.getElementById(
+            "movementDetailsContainer"
+        );
+
 
     const paymentMethod =
         document.getElementById(
@@ -274,6 +285,46 @@ function initializeMovementForm() {
         );
 
 
+    function setMovementDetailsExpanded(expanded) {
+
+        movementDetailsContainer?.classList.toggle(
+            "hidden",
+            !expanded
+        );
+
+        if (toggleMovementDetailsButton) {
+            toggleMovementDetailsButton.textContent =
+                expanded
+                    ? "Ocultar detalles"
+                    : "Agregar detalles";
+        }
+
+    }
+
+
+    function openNewMovementModal() {
+
+        movementModal.classList.remove("hidden");
+        setDefaultMovementDate();
+        setMovementDetailsExpanded(false);
+
+        requestAnimationFrame(() => {
+            document.getElementById("movementDescription")?.focus();
+        });
+
+    }
+
+
+    toggleMovementDetailsButton?.addEventListener(
+        "click",
+        () => {
+            setMovementDetailsExpanded(
+                movementDetailsContainer?.classList.contains("hidden")
+            );
+        }
+    );
+
+
     /*
         Abrir modal
     */
@@ -288,16 +339,7 @@ function initializeMovementForm() {
 
         openButton.addEventListener(
             "click",
-            () => {
-
-                movementModal
-                    .classList
-                    .remove("hidden");
-
-
-                setDefaultMovementDate();
-
-            }
+            openNewMovementModal
         );
 
     }
@@ -312,6 +354,8 @@ function initializeMovementForm() {
         movementModal
             .classList
             .add("hidden");
+
+        setMovementDetailsExpanded(false);
 
     }
 
@@ -662,6 +706,15 @@ function initializeMovementForm() {
 
         }
     );
+
+
+    const isMobileDevice =
+        window.matchMedia?.("(max-width: 768px)")?.matches ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+
+    if (isMobileDevice) {
+        requestAnimationFrame(openNewMovementModal);
+    }
 
 }
 
