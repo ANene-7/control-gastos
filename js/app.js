@@ -41,7 +41,8 @@ import {
 import {
     registerPurchaseWithMovement,
     registerPayment,
-    deleteCreditLinkedMovement
+    deleteCreditLinkedMovement,
+    updatePurchaseFinancing
 } from "./creditService.js";
 
 import {
@@ -215,6 +216,22 @@ function initializeMovementForm() {
             "recurrenceContainer"
         );
 
+    const creditPurchasePlanContainer = document.getElementById("creditPurchasePlanContainer");
+    const creditPurchasePlanMode = document.getElementById("creditPurchasePlanMode");
+    const creditPurchaseMonthsContainer = document.getElementById("creditPurchaseMonthsContainer");
+    const creditPurchaseMonths = document.getElementById("creditPurchaseMonths");
+
+    const refreshCreditPurchasePlanFields = () => {
+        const show = paymentMethod.value === "credit" && !isCreditPayment.checked;
+        creditPurchasePlanContainer?.classList.toggle("hidden", !show);
+        creditPurchaseMonthsContainer?.classList.toggle(
+            "hidden",
+            !show || creditPurchasePlanMode?.value !== "installments"
+        );
+    };
+
+    creditPurchasePlanMode?.addEventListener("change", refreshCreditPurchasePlanFields);
+
     
     const isIncome =
     document.getElementById(
@@ -226,6 +243,8 @@ function initializeMovementForm() {
         document.getElementById(
             "movementIsCreditPayment"
         );
+
+    isCreditPayment?.addEventListener("change", () => requestAnimationFrame(refreshCreditPurchasePlanFields));
 
 
     const isScheduled =
@@ -441,6 +460,8 @@ function initializeMovementForm() {
                     .add("hidden");
 
             }
+
+            refreshCreditPurchasePlanFields();
 
         }
     );
@@ -803,6 +824,9 @@ async function saveMovement() {
         ).value;
 
 
+    const purchasePlanMode = document.getElementById("creditPurchasePlanMode")?.value || "normal";
+    const installmentMonths = Number(document.getElementById("creditPurchaseMonths")?.value) || null;
+
     const movementDate =
         document.getElementById(
             "movementDate"
@@ -1025,6 +1049,9 @@ async function saveMovement() {
 
         creditId,
 
+        purchasePlanMode: paymentMethod === "credit" && purpose === "regular" ? purchasePlanMode : "normal",
+        installmentMonths: paymentMethod === "credit" && purpose === "regular" && purchasePlanMode === "installments" ? installmentMonths : null,
+
 
         status,
 
@@ -1082,7 +1109,9 @@ async function saveMovement() {
             date: movement.completedDate,
             description: movement.description,
             categoryId: movement.category || null,
-            movement
+            movement,
+            purchasePlanMode: movement.purchasePlanMode,
+            installmentMonths: movement.installmentMonths
         });
         Object.assign(movement, result.movement);
 
@@ -1717,7 +1746,9 @@ function initializeScheduledMovementModal() {
                         date: completedMovement.completedDate,
                         description: completedMovement.description,
                         categoryId: completedMovement.category || null,
-                        movement: completedMovement
+                        movement: completedMovement,
+                        purchasePlanMode: completedMovement.purchasePlanMode || "normal",
+                        installmentMonths: completedMovement.installmentMonths || null
                     });
                     Object.assign(completedMovement, result.movement);
                 } else if (
@@ -2750,6 +2781,11 @@ function initializeEditMovementModal() {
         );
 
 
+    const editCreditPurchasePlanContainer = document.getElementById("editCreditPurchasePlanContainer");
+    const editCreditPurchasePlanMode = document.getElementById("editCreditPurchasePlanMode");
+    const editCreditPurchaseMonthsContainer = document.getElementById("editCreditPurchaseMonthsContainer");
+    const editCreditPurchaseMonths = document.getElementById("editCreditPurchaseMonths");
+
     const creditPaymentSelectorContainer =
         document.getElementById(
             "editCreditPaymentSelectorContainer"
@@ -3075,6 +3111,8 @@ function initializeEditMovementModal() {
             creditPaymentSelectorContainer
                 .classList
                 .remove("hidden");
+            editCreditPurchasePlanContainer?.classList.add("hidden");
+            editCreditPurchaseMonthsContainer?.classList.add("hidden");
 
 
             return;
@@ -3100,15 +3138,15 @@ function initializeEditMovementModal() {
                 "credit"
         ) {
 
-            creditSelectorContainer
-                .classList
-                .remove("hidden");
+            creditSelectorContainer.classList.remove("hidden");
+            editCreditPurchasePlanContainer?.classList.remove("hidden");
+            editCreditPurchaseMonthsContainer?.classList.toggle("hidden", editCreditPurchasePlanMode?.value !== "installments");
 
         } else {
 
-            creditSelectorContainer
-                .classList
-                .add("hidden");
+            creditSelectorContainer.classList.add("hidden");
+            editCreditPurchasePlanContainer?.classList.add("hidden");
+            editCreditPurchaseMonthsContainer?.classList.add("hidden");
 
         }
 
@@ -3148,6 +3186,8 @@ function initializeEditMovementModal() {
         }
     );
 
+
+    editCreditPurchasePlanMode?.addEventListener("change", updateConditionalFields);
 
     isIncome.addEventListener(
         "change",
@@ -3282,6 +3322,9 @@ function initializeEditMovementModal() {
         creditPaymentSelector.value =
             selectedMovement.creditId ||
             "";
+
+        if (editCreditPurchasePlanMode) editCreditPurchasePlanMode.value = selectedMovement.purchasePlanMode || "normal";
+        if (editCreditPurchaseMonths) editCreditPurchaseMonths.value = selectedMovement.installmentMonths || 3;
 
 
         titleElement.textContent =
@@ -3583,6 +3626,9 @@ function initializeEditMovementModal() {
 
                     creditId,
 
+                    purchasePlanMode: method === "credit" && purpose === "regular" ? (editCreditPurchasePlanMode?.value || "normal") : "normal",
+                    installmentMonths: method === "credit" && purpose === "regular" && editCreditPurchasePlanMode?.value === "installments" ? (Number(editCreditPurchaseMonths?.value) || null) : null,
+
 
                     scheduledDate:
                         selectedMovement.status ===
@@ -3684,10 +3730,14 @@ function initializeEditMovementModal() {
                         });
                     }
                 } else {
-                    await saveRecord(
-                        "movements",
-                        updatedMovement
-                    );
+                    await saveRecord("movements", updatedMovement);
+                    if (updatedMovement.status === "completed" && updatedMovement.paymentMethod === "credit" && updatedMovement.purpose === "regular" && updatedMovement.creditOperationId) {
+                        await updatePurchaseFinancing({
+                            movement: updatedMovement,
+                            purchasePlanMode: updatedMovement.purchasePlanMode || "normal",
+                            installmentMonths: updatedMovement.installmentMonths || null
+                        });
+                    }
                 }
 
 

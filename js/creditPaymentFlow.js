@@ -85,10 +85,57 @@ function requestPartialResolution({ pendingBefore, paymentAmount, dueDate }) {
     });
 }
 
+
+function requestAllocationPreference() {
+    const elements = getModalElements();
+    if (!elements.modal || !elements.options) {
+        return Promise.resolve("next");
+    }
+
+    elements.title.textContent = "Aplicar abono";
+    elements.message.innerHTML = "¿Qué pagos quieres reducir con este abono?";
+    elements.options.innerHTML = `
+        <label class="credit-payment-resolution-option">
+            <input type="radio" name="creditPaymentResolution" value="next" checked>
+            <span><strong>Próximo pago programado</strong><small>Reduce primero el importe que vence antes.</small></span>
+        </label>
+        <label class="credit-payment-resolution-option">
+            <input type="radio" name="creditPaymentResolution" value="tail">
+            <span><strong>Últimos pagos</strong><small>Conserva intactos los próximos pagos y reduce el final del plan. Útil para abonos extraordinarios.</small></span>
+        </label>`;
+    elements.dateRow?.classList.add("hidden");
+    elements.modal.classList.remove("hidden");
+
+    return new Promise(resolve => {
+        const finish = value => {
+            elements.modal.classList.add("hidden");
+            elements.confirm.removeEventListener("click", onConfirm);
+            elements.cancel.removeEventListener("click", onCancel);
+            elements.close.removeEventListener("click", onCancel);
+            resolve(value);
+        };
+        const onConfirm = () => finish(elements.options.querySelector('input[name="creditPaymentResolution"]:checked')?.value || "next");
+        const onCancel = () => finish(null);
+        elements.confirm.addEventListener("click", onConfirm);
+        elements.cancel.addEventListener("click", onCancel);
+        elements.close.addEventListener("click", onCancel);
+    });
+}
+
 export async function prepareCreditPayment({ creditId, amount }) {
     const paymentAmount = Number(amount) || 0;
     if (!creditId || paymentAmount <= 0) {
-        return { partialResolution: "keep", partialDueDate: null };
+        return { partialResolution: "keep", partialDueDate: null, allocationPreference: "next" };
+    }
+
+    const allocationPreference = await requestAllocationPreference();
+    if (!allocationPreference) return null;
+
+    // Si el usuario decide reducir los últimos pagos, no tocamos la próxima
+    // obligación. El motor aplicará el abono al final del plan o, si no hay
+    // plan, lo dejará como reducción de deuda no asignada.
+    if (allocationPreference === "tail") {
+        return { partialResolution: "keep", partialDueDate: null, allocationPreference };
     }
 
     const [operations, obligations] = await Promise.all([
@@ -110,12 +157,13 @@ export async function prepareCreditPayment({ creditId, amount }) {
 
     const first = pendingObligations[0];
     if (!first || paymentAmount >= first.pendingAmount - 0.005) {
-        return { partialResolution: "keep", partialDueDate: null };
+        return { partialResolution: "keep", partialDueDate: null, allocationPreference };
     }
 
-    return requestPartialResolution({
+    const partial = await requestPartialResolution({
         pendingBefore: first.pendingAmount,
         paymentAmount,
         dueDate: first.dueDate || null
     });
+    return partial ? { ...partial, allocationPreference } : null;
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "cauce-v57";
+const CACHE_NAME = "cauce-v59";
 
 
 const APP_FILES = [

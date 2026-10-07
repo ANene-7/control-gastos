@@ -478,6 +478,21 @@
 
                 </div>
 
+                <div id="creditPurchasePlanContainer" class="form-group hidden">
+                    <label for="creditPurchasePlanMode">Tratamiento de esta compra</label>
+                    <select id="creditPurchasePlanMode">
+                        <option value="normal">Pago normal de la tarjeta</option>
+                        <option value="installments">Diferir esta compra a meses</option>
+                        <option value="extend_plan">Sumar al plan actual de pagos</option>
+                    </select>
+                </div>
+
+                <div id="creditPurchaseMonthsContainer" class="form-group hidden">
+                    <label for="creditPurchaseMonths">Número de meses</label>
+                    <input id="creditPurchaseMonths" type="number" min="2" max="60" step="1" value="3">
+                    <small>Ejemplo: $900 a 3 meses proyectará 3 pagos de $300.</small>
+                </div>
+
                 <div
                     id="movementDetailsContainer"
                     class="movement-details hidden">
@@ -2017,6 +2032,20 @@
 
             </div>
 
+
+            <div id="editCreditPurchasePlanContainer" class="form-group hidden">
+                <label for="editCreditPurchasePlanMode">Tratamiento de esta compra</label>
+                <select id="editCreditPurchasePlanMode">
+                    <option value="normal">Pago normal de la tarjeta</option>
+                    <option value="installments">Diferir esta compra a meses</option>
+                    <option value="extend_plan">Sumar al plan actual de pagos</option>
+                </select>
+            </div>
+
+            <div id="editCreditPurchaseMonthsContainer" class="form-group hidden">
+                <label for="editCreditPurchaseMonths">Número de meses</label>
+                <input id="editCreditPurchaseMonths" type="number" min="2" max="60" step="1" value="3">
+            </div>
 
             <div
                 id="editCreditPaymentSelectorContainer"

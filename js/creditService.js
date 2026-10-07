@@ -258,7 +258,9 @@ export async function registerPurchaseWithMovement({
     date,
     description = "Compra con crédito",
     categoryId = null,
-    movement
+    movement,
+    purchasePlanMode = "normal",
+    installmentMonths = null
 }) {
 
     if (!movement?.id) {
@@ -287,13 +289,60 @@ export async function registerPurchaseWithMovement({
 
     const movementRecord = {
         ...movement,
-        creditOperationId: operation.id
+        creditOperationId: operation.id,
+        purchasePlanMode: purchasePlanMode || "normal",
+        installmentMonths: purchasePlanMode === "installments" ? Number(installmentMonths) || null : null
     };
 
-    await commit([
+    const writes = [
         { type: "put", storeName: STORES.movements, record: movementRecord },
         { type: "put", storeName: STORES.creditOperations, record: operation }
-    ]);
+    ];
+
+    if (purchasePlanMode === "installments") {
+        const months = Number(installmentMonths);
+        if (!Number.isInteger(months) || months < 2 || months > 60) {
+            throw new Error("Indica un número de meses entre 2 y 60.");
+        }
+        const installmentAmount = Math.round((Number(amount) / months) * 100) / 100;
+        const plan = createEntity({
+            creditId,
+            sourceType: "purchase",
+            sourceOperationId: operation.id,
+            originalAmount: Number(amount),
+            mode: "installments",
+            frequency: "monthly",
+            installmentCount: months,
+            installmentAmount,
+            firstDueDate: period?.dueDate || date,
+            status: "active"
+        });
+        writes.push({ type: "put", storeName: STORES.creditPlans, record: plan });
+    } else if (purchasePlanMode === "extend_plan") {
+        const plans = await getAll(STORES.creditPlans);
+        const activePlans = plans
+            .filter(item => String(item.creditId) === String(creditId) && item.status === "active" && item.sourceType !== "purchase")
+            .sort((a, b) => String(a.firstDueDate || "9999-12-31").localeCompare(String(b.firstDueDate || "9999-12-31")));
+        const plan = activePlans[0];
+        if (!plan) {
+            throw new Error("Este crédito no tiene un plan activo al que sumar la compra.");
+        }
+        const newAmount = Math.round(((Number(plan.originalAmount) || 0) + Number(amount)) * 100) / 100;
+        const installmentAmount = Number(plan.installmentAmount) || newAmount;
+        movementRecord.extendedPlanId = plan.id;
+        movementRecord.extendedPlanAmount = Number(amount);
+        writes[0].record = movementRecord;
+        writes.push({
+            type: "put",
+            storeName: STORES.creditPlans,
+            record: updateEntity(plan, {
+                originalAmount: newAmount,
+                installmentCount: Math.ceil(newAmount / installmentAmount)
+            })
+        });
+    }
+
+    await commit(writes);
 
     return { movement: movementRecord, operation };
 }
@@ -401,7 +450,8 @@ export async function registerPayment({
     planId = null,
     movement,
     partialResolution = "keep",
-    partialDueDate = null
+    partialDueDate = null,
+    allocationPreference = "next"
 }) {
 
     if (!movement?.id) {
@@ -451,8 +501,8 @@ export async function registerPayment({
         ? allPendingObligations.find(item => String(item.id) === String(obligationId))
         : null;
     const nextCurrent = explicit || allPendingObligations.find(item => String(item.dueDate || "9999-12-31") >= String(date)) || null;
-    const creditObligations = [...overdueObligations];
-    if (nextCurrent && !creditObligations.some(item => String(item.id) === String(nextCurrent.id))) {
+    const creditObligations = allocationPreference === "tail" ? [] : [...overdueObligations];
+    if (allocationPreference !== "tail" && nextCurrent && !creditObligations.some(item => String(item.id) === String(nextCurrent.id))) {
         creditObligations.push(nextCurrent);
     }
 
@@ -514,7 +564,7 @@ export async function registerPayment({
             .filter(installment => installment.date && installment.date <= date)
             .reduce((sum, installment) => sum + (Number(installment.amount) || 0), 0);
 
-        if (dueNow > 0.005 && amountToAllocate > 0.005) {
+        if (allocationPreference !== "tail" && dueNow > 0.005 && amountToAllocate > 0.005) {
             const frontAmount = Math.min(amountToAllocate, dueNow, pending);
             allocations.push({
                 type: "plan",
@@ -532,7 +582,7 @@ export async function registerPayment({
                 type: "plan",
                 id: plan.id,
                 amount: extraAmount,
-                mode: getPlanAllocationMode(credit, date)
+                mode: allocationPreference === "tail" ? "tail" : getPlanAllocationMode(credit, date)
             });
             amountToAllocate = Math.max(0, amountToAllocate - extraAmount);
         }
@@ -566,6 +616,7 @@ export async function registerPayment({
             allocations,
             paymentResolution: partialResolution || "keep",
             paymentResolutionDate: partialDueDate || null,
+            allocationPreference: allocationPreference || "next",
             movementId: movement.id,
             direction: null
         });
@@ -669,4 +720,70 @@ export async function deleteCreditLinkedMovement(movementId) {
     }
 
     return true;
+}
+
+
+export async function updatePurchaseFinancing({ movement, purchasePlanMode = "normal", installmentMonths = null }) {
+    if (!movement?.id || !movement?.creditId || !movement?.creditOperationId) return movement;
+    const [credit, plans, operations] = await Promise.all([
+        getById(STORES.credits, movement.creditId),
+        getAll(STORES.creditPlans),
+        getAll(STORES.creditOperations)
+    ]);
+    if (!credit) throw new Error("El crédito de la compra no existe.");
+
+    const writes = [];
+    const linkedOperation = operations.find(op => String(op.id) === String(movement.creditOperationId));
+    if (linkedOperation) {
+        writes.push({ type: "put", storeName: STORES.creditOperations, record: updateEntity(linkedOperation, {
+            amount: Number(movement.amount),
+            date: movement.completedDate || linkedOperation.date,
+            description: movement.description || linkedOperation.description,
+            categoryId: movement.category || linkedOperation.categoryId || null
+        }) });
+    }
+    const sourcePlans = plans.filter(p => p.sourceType === "purchase" && String(p.sourceOperationId) === String(movement.creditOperationId));
+    sourcePlans.forEach(p => writes.push({ type: "delete", storeName: STORES.creditPlans, id: p.id }));
+
+    // Revertir una ampliación previa antes de aplicar la nueva elección.
+    if (movement.extendedPlanId && Number(movement.extendedPlanAmount) > 0) {
+        const previous = plans.find(p => String(p.id) === String(movement.extendedPlanId));
+        if (previous) {
+            const originalAmount = Math.max(0, (Number(previous.originalAmount) || 0) - Number(movement.extendedPlanAmount));
+            const installmentAmount = Number(previous.installmentAmount) || originalAmount || 1;
+            writes.push({ type: "put", storeName: STORES.creditPlans, record: updateEntity(previous, {
+                originalAmount,
+                installmentCount: Math.max(1, Math.ceil(originalAmount / installmentAmount))
+            }) });
+        }
+    }
+
+    const updated = { ...movement, purchasePlanMode, installmentMonths: null, extendedPlanId: null, extendedPlanAmount: null };
+    const period = await ensurePeriodForDate(credit, movement.completedDate || movement.scheduledDate);
+
+    if (purchasePlanMode === "installments") {
+        const months = Number(installmentMonths);
+        if (!Number.isInteger(months) || months < 2 || months > 60) throw new Error("Indica un número de meses entre 2 y 60.");
+        updated.installmentMonths = months;
+        writes.push({ type: "put", storeName: STORES.creditPlans, record: createEntity({
+            creditId: movement.creditId, sourceType: "purchase", sourceOperationId: movement.creditOperationId,
+            originalAmount: Number(movement.amount), mode: "installments", frequency: "monthly",
+            installmentCount: months, installmentAmount: Math.round((Number(movement.amount) / months) * 100) / 100,
+            firstDueDate: period?.dueDate || movement.completedDate, status: "active"
+        }) });
+    } else if (purchasePlanMode === "extend_plan") {
+        const active = plans.filter(p => String(p.creditId) === String(movement.creditId) && p.status === "active" && p.sourceType !== "purchase")
+            .sort((a,b) => String(a.firstDueDate||"").localeCompare(String(b.firstDueDate||"")))[0];
+        if (!active) throw new Error("Este crédito no tiene un plan activo al que sumar la compra.");
+        const baseAmount = String(active.id) === String(movement.extendedPlanId || "")
+            ? Math.max(0, (Number(active.originalAmount) || 0) - Number(movement.extendedPlanAmount || 0))
+            : (Number(active.originalAmount) || 0);
+        const originalAmount = baseAmount + Number(movement.amount);
+        const installmentAmount = Number(active.installmentAmount) || originalAmount;
+        updated.extendedPlanId = active.id; updated.extendedPlanAmount = Number(movement.amount);
+        writes.push({ type: "put", storeName: STORES.creditPlans, record: updateEntity(active, { originalAmount, installmentCount: Math.ceil(originalAmount / installmentAmount) }) });
+    }
+    writes.push({ type: "put", storeName: STORES.movements, record: updated });
+    await commit(writes);
+    return updated;
 }
